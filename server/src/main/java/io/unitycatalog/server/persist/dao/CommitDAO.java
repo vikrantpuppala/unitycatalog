@@ -1,5 +1,9 @@
 package io.unitycatalog.server.persist.dao;
 
+import io.unitycatalog.server.model.Commit;
+import io.unitycatalog.server.model.CommitInfo;
+import io.unitycatalog.server.model.Metadata;
+import io.unitycatalog.server.model.Protocol;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -52,4 +56,19 @@ public class CommitDAO {
 
     @Column(name = "metastore_id", nullable = false)
     private String metastoreId;
+
+    public Commit toCommit() {
+        Commit commit = new Commit()
+                .tableId(tableId.toString())
+                .commitInfo(new CommitInfo()
+                        .version(commitVersion)
+                        .fileName(commitFilename)
+                        .fileSize(commitFilesize)
+                        .fileModificationTimestamp(commitFileModificationTimestamp.getTime())
+                        .timestamp(commitTimestamp.getTime())
+                        .isDisownCommit(isDisownCommit));
+        if (isBackfilledLatestCommit)
+            commit.latestBackfilledVersion(commitVersion);
+        return commit;
+    }
 }

@@ -6,6 +6,8 @@ import com.linecorp.armeria.server.annotation.Post;
 import io.unitycatalog.server.exception.GlobalExceptionHandler;
 import io.unitycatalog.server.model.Commit;
 
+import java.util.List;
+
 import static io.unitycatalog.server.utils.CommitUtils.*;
 
 @ExceptionHandler(GlobalExceptionHandler.class)
@@ -16,6 +18,6 @@ public class CommitService {
         validate(commit);
         validateTablePath(commit);
 
-        getFirstAndLastCommits(commit.getTableId());
+        List<Commit> firstAndLastCommits = getFirstAndLastCommits(commit.getTableId());
     }
 }
