@@ -6,6 +6,7 @@ import io.unitycatalog.server.model.Metadata;
 import io.unitycatalog.server.model.Protocol;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.util.Date;
 import java.util.UUID;
@@ -24,6 +25,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class CommitDAO {
     @Id
+    @UuidGenerator
     @Column(name = "id", columnDefinition = "BINARY(16)")
     private UUID id;
 
@@ -70,5 +72,20 @@ public class CommitDAO {
         if (isBackfilledLatestCommit)
             commit.latestBackfilledVersion(commitVersion);
         return commit;
+    }
+
+    public static CommitDAO from(Commit commit) {
+        // TODO: how to set ID and metastore ID?
+        return CommitDAO.builder()
+                .tableId(UUID.fromString(commit.getTableId()))
+                .commitVersion(commit.getCommitInfo().getVersion())
+                .commitFilename(commit.getCommitInfo().getFileName())
+                .commitFilesize(commit.getCommitInfo().getFileSize())
+                .commitFileModificationTimestamp(new Date(commit.getCommitInfo().getFileModificationTimestamp()))
+                .commitTimestamp(new Date(commit.getCommitInfo().getTimestamp()))
+                .isDisownCommit(commit.getCommitInfo().getIsDisownCommit() != null && commit.getCommitInfo().getIsDisownCommit())
+                .isBackfilledLatestCommit(false)
+                .metastoreId("universal_metastore")
+                .build();
     }
 }
