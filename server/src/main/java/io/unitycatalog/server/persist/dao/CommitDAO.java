@@ -56,20 +56,14 @@ public class CommitDAO {
   @Column(name = "metastore_id", nullable = false)
   private String metastoreId;
 
-  public Commit toCommit() {
-    Commit commit =
-        new Commit()
-            .tableId(tableId.toString())
-            .commitInfo(
-                new CommitInfo()
-                    .version(commitVersion)
-                    .fileName(commitFilename)
-                    .fileSize(commitFilesize)
-                    .fileModificationTimestamp(commitFileModificationTimestamp.getTime())
-                    .timestamp(commitTimestamp.getTime())
-                    .isDisownCommit(isDisownCommit));
-    if (isBackfilledLatestCommit) commit.latestBackfilledVersion(commitVersion);
-    return commit;
+  public CommitInfo toCommitInfo() {
+    return new CommitInfo()
+        .version(commitVersion)
+        .fileName(commitFilename)
+        .fileSize(commitFilesize)
+        .fileModificationTimestamp(commitFileModificationTimestamp.getTime())
+        .timestamp(commitTimestamp.getTime())
+        .isDisownCommit(isDisownCommit);
   }
 
   public static CommitDAO from(Commit commit) {

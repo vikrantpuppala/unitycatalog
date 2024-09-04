@@ -162,4 +162,24 @@ public class CommitRepository {
       }
     }
   }
+
+  public List<CommitDAO> getLatestCommits(String tableId, Integer maxNumCommits) {
+    try (Session session = SESSION_FACTORY.openSession()) {
+      Transaction tx = session.beginTransaction();
+      try {
+        Query<CommitDAO> query =
+            session.createQuery(
+                "FROM CommitDAO WHERE tableId = :tableId ORDER BY commitVersion DESC",
+                CommitDAO.class);
+        query.setParameter("tableId", tableId);
+        query.setMaxResults(maxNumCommits);
+        List<CommitDAO> result = query.list();
+        tx.commit();
+        return result;
+      } catch (Exception e) {
+        tx.rollback();
+        throw e;
+      }
+    }
+  }
 }

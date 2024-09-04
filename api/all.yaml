@@ -1083,16 +1083,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  commits:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/CommitInfo'
-                  latest_table_version:
-                    type: integer
-                    format: int64
-                    description: The latest tracked version.
+                $ref: '#/components/schemas/GetCommitsResponse'
     post:
       summary: Commit changes to a specified table
       operationId: commit
@@ -2276,6 +2267,17 @@ components:
     CommitResponse:
       type: object
       description: The response for the commit action.
+    GetCommitsResponse:
+      type: object
+      properties:
+        commits:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommitInfo'
+        latest_table_version:
+          type: integer
+          format: int64
+          description: The latest tracked version.
 info:
   title: Unity Catalog API
   version: '0.1'
