@@ -16,10 +16,18 @@ import io.unitycatalog.server.model.ListCatalogsResponse;
 import io.unitycatalog.server.model.ListSchemasResponse;
 import io.unitycatalog.server.model.ListTablesResponse;
 import io.unitycatalog.server.model.SchemaInfo;
+import io.unitycatalog.server.model.TableInfo;
 import io.unitycatalog.server.persist.TableRepository;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
 import io.unitycatalog.server.service.iceberg.MetadataService;
+import io.unitycatalog.server.service.iceberg.TableConfigService;
 import io.unitycatalog.server.utils.JsonUtils;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -34,27 +42,27 @@ import org.apache.iceberg.rest.responses.LoadViewResponse;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 @ExceptionHandler(IcebergRestExceptionHandler.class)
 public class IcebergRestCatalogService {
 
   private final CatalogService catalogService;
   private final SchemaService schemaService;
   private final TableService tableService;
+  private final TableConfigService tableConfigService;
   private final MetadataService metadataService;
   private final TableRepository tableRepository = TableRepository.getInstance();
   private static final SessionFactory sessionFactory = HibernateUtils.getSessionFactory();
 
   public IcebergRestCatalogService(
-      CatalogService catalogService, SchemaService schemaService, TableService tableService, MetadataService metadataService) {
+      CatalogService catalogService,
+      SchemaService schemaService,
+      TableService tableService,
+      TableConfigService tableConfigService,
+      MetadataService metadataService) {
     this.catalogService = catalogService;
     this.schemaService = schemaService;
     this.tableService = tableService;
+    this.tableConfigService = tableConfigService;
     this.metadataService = metadataService;
   }
 
@@ -74,7 +82,12 @@ public class IcebergRestCatalogService {
       throws JsonProcessingException {
     // List catalogs if the parent is not present
     if (!parent.isPresent()) {
-      String respContent = catalogService.listCatalogs().aggregate().join().contentUtf8();
+      String respContent =
+          catalogService
+              .listCatalogs(Optional.empty(), Optional.empty())
+              .aggregate()
+              .join()
+              .contentUtf8();
       ListCatalogsResponse resp =
           JsonUtils.getInstance().readValue(respContent, ListCatalogsResponse.class);
       assert resp.getCatalogs() != null;
@@ -178,7 +191,7 @@ public class IcebergRestCatalogService {
     String schema = namespaceParts.get(1);
     String metadataLocation;
     try (Session session = sessionFactory.openSession()) {
-      tableRepository.getTable(namespace + "." + table);
+      TableInfo tableInfo = tableRepository.getTable(namespace + "." + table);
       metadataLocation =
           tableRepository.getTableUniformMetadataLocation(session, catalog, schema, table);
     }
@@ -188,8 +201,12 @@ public class IcebergRestCatalogService {
     }
 
     TableMetadata tableMetadata = metadataService.readTableMetadata(metadataLocation);
+    Map<String, String> config = tableConfigService.getTableConfig(tableMetadata);
 
-    return LoadTableResponse.builder().withTableMetadata(tableMetadata).build();
+    return LoadTableResponse.builder()
+        .withTableMetadata(tableMetadata)
+        .addAllConfig(config)
+        .build();
   }
 
   @Get("/v1/namespaces/{namespace}/views/{view}")

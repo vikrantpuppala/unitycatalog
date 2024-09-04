@@ -24,20 +24,25 @@ import org.fusesource.jansi.AnsiConsole;
 import org.json.JSONObject;
 
 public class CliUtils {
+  public static final String AUTH = "auth";
   public static final String CATALOG = "catalog";
   public static final String SCHEMA = "schema";
   public static final String VOLUME = "volume";
   public static final String TABLE = "table";
 
   public static final String FUNCTION = "function";
+  public static final String REGISTERED_MODEL = "registered_model";
+  public static final String MODEL_VERSION = "model_version";
   public static final String CREATE = "create";
   public static final String LIST = "list";
   public static final String GET = "get";
   public static final String READ = "read";
   public static final String WRITE = "write";
+  public static final String FINALIZE = "finalize";
   public static final String EXECUTE = "call";
   public static final String UPDATE = "update";
   public static final String DELETE = "delete";
+  public static final String LOGIN = "login";
 
   public static final String EMPTY = "";
   public static final String EMPTY_JSON = "{}";
@@ -70,16 +75,28 @@ public class CliUtils {
       new HashMap<String, Map<String, CliOptions>>() {
         {
           put(
+              AUTH,
+              new HashMap<String, CliOptions>() {
+                {
+                  put(LOGIN, new CliOptions(List.of(), List.of(CliParams.IDENTITY_TOKEN)));
+                }
+              });
+          put(
               CATALOG,
               new HashMap<String, CliOptions>() {
                 {
-                  put(CREATE, new CliOptions(List.of(CliParams.NAME), List.of(CliParams.COMMENT)));
+                  put(
+                      CREATE,
+                      new CliOptions(
+                          List.of(CliParams.NAME),
+                          List.of(CliParams.COMMENT, CliParams.PROPERTIES)));
                   put(LIST, new CliOptions(List.of(), List.of(CliParams.MAX_RESULTS)));
                   put(GET, new CliOptions(List.of(CliParams.NAME), List.of()));
                   put(
                       UPDATE,
                       new CliOptions(
-                          List.of(CliParams.NAME), List.of(CliParams.NEW_NAME, CliParams.COMMENT)));
+                          List.of(CliParams.NAME),
+                          List.of(CliParams.NEW_NAME, CliParams.COMMENT, CliParams.PROPERTIES)));
                   put(DELETE, new CliOptions(List.of(CliParams.NAME), List.of(CliParams.FORCE)));
                 }
               });
@@ -91,7 +108,7 @@ public class CliUtils {
                       CREATE,
                       new CliOptions(
                           List.of(CliParams.CATALOG_NAME, CliParams.NAME),
-                          List.of(CliParams.COMMENT)));
+                          List.of(CliParams.COMMENT, CliParams.PROPERTIES)));
                   put(
                       LIST,
                       new CliOptions(
@@ -100,8 +117,8 @@ public class CliUtils {
                   put(
                       UPDATE,
                       new CliOptions(
-                          List.of(CliParams.FULL_NAME, CliParams.NEW_NAME),
-                          List.of(CliParams.COMMENT)));
+                          List.of(CliParams.FULL_NAME),
+                          List.of(CliParams.NEW_NAME, CliParams.COMMENT, CliParams.PROPERTIES)));
                   put(
                       DELETE,
                       new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.FORCE)));
@@ -125,8 +142,8 @@ public class CliUtils {
                   put(
                       UPDATE,
                       new CliOptions(
-                          List.of(CliParams.FULL_NAME, CliParams.NEW_NAME),
-                          List.of(CliParams.COMMENT)));
+                          List.of(CliParams.FULL_NAME),
+                          List.of(CliParams.COMMENT, CliParams.NEW_NAME)));
                   put(DELETE, new CliOptions(List.of(CliParams.FULL_NAME), List.of()));
                   put(READ, new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.PATH)));
                   put(WRITE, new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.PATH)));
@@ -178,6 +195,59 @@ public class CliUtils {
                       EXECUTE,
                       new CliOptions(
                           List.of(CliParams.FULL_NAME, CliParams.INPUT_PARAMS), List.of()));
+                }
+              });
+          put(
+              REGISTERED_MODEL,
+              new HashMap<String, CliOptions>() {
+                {
+                  put(
+                      CREATE,
+                      new CliOptions(
+                          List.of(CliParams.CATALOG_NAME, CliParams.SCHEMA_NAME, CliParams.NAME),
+                          List.of(CliParams.COMMENT)));
+                  put(
+                      LIST,
+                      new CliOptions(
+                          List.of(CliParams.CATALOG_NAME, CliParams.SCHEMA_NAME),
+                          List.of(CliParams.MAX_RESULTS)));
+                  put(GET, new CliOptions(List.of(CliParams.FULL_NAME), List.of()));
+                  put(
+                      UPDATE,
+                      new CliOptions(
+                          List.of(CliParams.FULL_NAME),
+                          List.of(CliParams.NEW_NAME, CliParams.COMMENT)));
+                  put(
+                      DELETE,
+                      new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.FORCE)));
+                }
+              });
+          put(
+              MODEL_VERSION,
+              new HashMap<String, CliOptions>() {
+                {
+                  put(
+                      CREATE,
+                      new CliOptions(
+                          List.of(CliParams.CATALOG_NAME, CliParams.SCHEMA_NAME, CliParams.NAME),
+                          List.of(CliParams.COMMENT, CliParams.RUN_ID, CliParams.SOURCE)));
+                  put(
+                      LIST,
+                      new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.MAX_RESULTS)));
+                  put(
+                      GET,
+                      new CliOptions(List.of(CliParams.FULL_NAME, CliParams.VERSION), List.of()));
+                  put(
+                      UPDATE,
+                      new CliOptions(
+                          List.of(CliParams.FULL_NAME, CliParams.VERSION),
+                          List.of(CliParams.COMMENT)));
+                  put(
+                      DELETE,
+                      new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.VERSION)));
+                  put(
+                      FINALIZE,
+                      new CliOptions(List.of(CliParams.FULL_NAME), List.of(CliParams.VERSION)));
                 }
               });
         }
@@ -381,9 +451,9 @@ public class CliUtils {
         cmd.hasOption(OUTPUT)
             && ("json".equals(cmd.getOptionValue(OUTPUT))
                 || "jsonPretty".equals(cmd.getOptionValue(OUTPUT)));
-    if (jsonFormat || READ.equals(subCommand) || EXECUTE.equals(subCommand))
+    if (jsonFormat || READ.equals(subCommand) || EXECUTE.equals(subCommand)) {
       System.out.println(output);
-    else {
+    } else {
       AsciiTable at = new AsciiTable();
       int outputWidth = getOutputWidth();
       try {
@@ -439,6 +509,9 @@ public class CliUtils {
       System.out.printf("  --%s %s\n", param.val(), param.getHelpMessage());
     }
     System.out.println("Optional Params:");
+    for (CliParams param : commonOptions) {
+      System.out.printf("  --%s %s\n", param.val(), param.getHelpMessage());
+    }
     for (CliParams param : options.getOptionalParams()) {
       System.out.printf("  --%s %s\n", param.val(), param.getHelpMessage());
     }
@@ -451,9 +524,10 @@ public class CliUtils {
     System.out.println();
     System.out.println(
         "By default, the client will connect to UC running locally at http://localhost:8080\n");
-    System.out.println("To connect to specific UC server, use --server https://<host>\n");
+    System.out.println("To connect to specific UC server, use --server https://<host>:<port>\n");
     System.out.println(
-        "Currently, auth using bearer token is supported. Please specify the token via --auth_token <PAT Token>\n");
+        "Currently, auth using bearer token is supported. Please specify the token via --auth_token"
+            + " <PAT Token>\n");
     System.out.println(
         "For detailed help on entity specific operations, use bin/uc <entity> --help");
   }

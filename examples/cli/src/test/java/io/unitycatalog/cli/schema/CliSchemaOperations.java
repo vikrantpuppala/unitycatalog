@@ -3,6 +3,7 @@ package io.unitycatalog.cli.schema;
 import static io.unitycatalog.cli.TestUtils.addServerAndAuthParams;
 import static io.unitycatalog.cli.TestUtils.executeCLICommand;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,14 @@ public class CliSchemaOperations implements SchemaOperations {
       argsList.add("--comment");
       argsList.add(createSchema.getComment());
     }
+    if (createSchema.getProperties() != null && !createSchema.getProperties().isEmpty()) {
+      argsList.add("--properties");
+      try {
+        argsList.add(objectMapper.writeValueAsString(createSchema.getProperties()));
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException("Failed to serialize properties", e);
+      }
+    }
     String[] args = addServerAndAuthParams(argsList, config);
     JsonNode schemaInfoJson = executeCLICommand(args);
     return objectMapper.convertValue(schemaInfoJson, SchemaInfo.class);
@@ -61,19 +70,26 @@ public class CliSchemaOperations implements SchemaOperations {
   }
 
   @Override
-  public SchemaInfo updateSchema(String schemaName, UpdateSchema updateSchema) {
-    String[] args =
-        addServerAndAuthParams(
-            List.of(
-                "schema",
-                "update",
-                "--full_name",
-                schemaName,
-                "--new_name",
-                updateSchema.getNewName(),
-                "--comment",
-                updateSchema.getComment()),
-            config);
+  public SchemaInfo updateSchema(String schemaFullName, UpdateSchema updateSchema) {
+    List<String> argsList =
+        new ArrayList<>(List.of("schema", "update", "--full_name", schemaFullName));
+    if (updateSchema.getNewName() != null) {
+      argsList.add("--new_name");
+      argsList.add(updateSchema.getNewName());
+    }
+    if (updateSchema.getComment() != null) {
+      argsList.add("--comment");
+      argsList.add(updateSchema.getComment());
+    }
+    if (updateSchema.getProperties() != null && !updateSchema.getProperties().isEmpty()) {
+      argsList.add("--properties");
+      try {
+        argsList.add(objectMapper.writeValueAsString(updateSchema.getProperties()));
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException("Failed to serialize properties", e);
+      }
+    }
+    String[] args = addServerAndAuthParams(argsList, config);
     JsonNode updatedSchemaInfo = executeCLICommand(args);
     return objectMapper.convertValue(updatedSchemaInfo, SchemaInfo.class);
   }
