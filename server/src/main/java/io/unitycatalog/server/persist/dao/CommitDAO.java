@@ -44,13 +44,10 @@ public class CommitDAO {
   @Column(name = "commit_timestamp", nullable = false)
   private Date commitTimestamp;
 
-  @Column(name = "is_backfilled_latest_commit", nullable = false)
+  @Column(name = "is_backfilled_latest_commit")
   private Boolean isBackfilledLatestCommit;
 
-  @Column(name = "is_preregistration_commit", nullable = false)
-  private Boolean isPreregistrationCommit;
-
-  @Column(name = "is_disown_commit", nullable = false)
+  @Column(name = "is_disown_commit")
   private Boolean isDisownCommit;
 
   @Column(name = "metastore_id", nullable = false)

@@ -29,6 +29,9 @@ tags:
     description: |
       Model versions contain all artifact files associated with an individual machine learning model. They are associated with a single parent model and have an integer identifier, indicating the version number of the model.
       Model versions are referenced via model URI's using the Unity Catalog three-level namespace of the registered model and the version identifier.
+  - name: CoordinatedCommits
+    description: |
+      Coordinated commits are a delta tables features that allow for multiple clients to commit changes to a table in a coordinated manner.
 paths:
   /catalogs:
     post:
@@ -1039,7 +1042,7 @@ paths:
     get:
       operationId: getCommits
       tags:
-        - GetCommits
+        - CoordinatedCommits
       summary: List Delta Commits
       description: |
         List all the delta commits.
@@ -1085,6 +1088,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetCommitsResponse'
     post:
+      tags:
+        - CoordinatedCommits
       summary: Commit changes to a specified table
       operationId: commit
       requestBody:

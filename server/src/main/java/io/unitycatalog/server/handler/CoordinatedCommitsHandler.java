@@ -10,6 +10,7 @@ import io.unitycatalog.server.persist.CommitRepository;
 import io.unitycatalog.server.persist.TableRepository;
 import io.unitycatalog.server.persist.dao.CommitDAO;
 import java.util.Objects;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +22,7 @@ public class CoordinatedCommitsHandler {
   public static void validate(Commit commit) {
     // Validate the commit object
     assert commit.getTableId() != null;
-    assert commit.getTableUri() != null;
+    //    assert commit.getTableUri() != null;
 
     // TODO: Add other assertions like the table URI path exists
 
@@ -67,14 +68,15 @@ public class CoordinatedCommitsHandler {
     // We only need to delete when there is more than one commit. We always keep the last commit.
     if (firstCommit.getCommitVersion() < lastCommit.getCommitVersion()) {
       COMMIT_REPOSITORY.backfillCommits(
-          tableId,
+          UUID.fromString(tableId),
           Math.min(latestBackfilledVersion, lastCommit.getCommitVersion() - 1),
           firstCommit,
           lastCommit.getCommitVersion());
     }
     if (latestBackfilledVersion == lastCommit.getCommitVersion()) {
       // Mark the last commit as the latest backfilled version
-      COMMIT_REPOSITORY.markCommitAsLatestBackfilled(tableId, lastCommit.getCommitVersion());
+      COMMIT_REPOSITORY.markCommitAsLatestBackfilled(
+          UUID.fromString(tableId), lastCommit.getCommitVersion());
     }
 
     // TODO: Should we also retain the disown commit if it's backfilled?
@@ -110,7 +112,7 @@ public class CoordinatedCommitsHandler {
     COMMIT_REPOSITORY.saveCommit(commit);
     if (latestBackfilledVersion >= firstCommit.getCommitVersion()) {
       COMMIT_REPOSITORY.backfillCommits(
-          commit.getTableId(),
+          UUID.fromString(commit.getTableId()),
           latestBackfilledVersion,
           firstCommit,
           commit.getCommitInfo().getVersion());

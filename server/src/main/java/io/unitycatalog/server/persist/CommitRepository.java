@@ -48,7 +48,7 @@ public class CommitRepository {
   }
 
   public void backfillCommits(
-      String tableId, Long upTo, CommitDAO firstCommit, Long highestCommitVersion) {
+      UUID tableId, Long upTo, CommitDAO firstCommit, Long highestCommitVersion) {
     assert upTo >= firstCommit.getCommitVersion();
     assert upTo < highestCommitVersion;
     long numCommitsToDelete = upTo - firstCommit.getCommitVersion() + 1;
@@ -71,7 +71,7 @@ public class CommitRepository {
     }
   }
 
-  public int deleteCommits(String tableId, Long upTo) {
+  public int deleteCommits(UUID tableId, Long upTo) {
     try (Session session = SESSION_FACTORY.openSession()) {
       Transaction tx = session.beginTransaction();
       try {
@@ -93,13 +93,13 @@ public class CommitRepository {
     }
   }
 
-  public void markCommitAsLatestBackfilled(String tableId, Long commitVersion) {
+  public void markCommitAsLatestBackfilled(UUID tableId, Long commitVersion) {
     try (Session session = SESSION_FACTORY.openSession()) {
       Transaction tx = session.beginTransaction();
       try {
         NativeQuery<CommitDAO> query =
             session.createNativeQuery(
-                "UPDATE uc_commits SET is_latest_backfilled = true WHERE table_id = :tableId "
+                "UPDATE uc_commits SET is_backfilled_latest_commit = true WHERE table_id = :tableId "
                     + "AND commit_version = :commitVersion",
                 CommitDAO.class);
         query.setParameter("tableId", tableId);
@@ -114,7 +114,7 @@ public class CommitRepository {
     }
   }
 
-  public List<CommitDAO> getFirstAndLastCommits(String tableId) {
+  public List<CommitDAO> getFirstAndLastCommits(UUID tableId) {
     try (Session session = SESSION_FACTORY.openSession()) {
       Transaction tx = session.beginTransaction();
       try {
@@ -163,7 +163,7 @@ public class CommitRepository {
     }
   }
 
-  public List<CommitDAO> getLatestCommits(String tableId, Integer maxNumCommits) {
+  public List<CommitDAO> getLatestCommits(UUID tableId, Integer maxNumCommits) {
     try (Session session = SESSION_FACTORY.openSession()) {
       Transaction tx = session.beginTransaction();
       try {
