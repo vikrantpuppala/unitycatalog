@@ -21,6 +21,7 @@ public class SdkCoordinatedCommitsOperations implements CoordinatedCommitsOperat
 
   @Override
   public GetCommitsResponse getCommits(String tableId, Long startVersion) throws ApiException {
-    return coordinatedCommitsApi.getCommits(tableId, null, startVersion, null, 100);
+    // TODO: do not set dummy values for uri, name, and maxNumCommits
+    return coordinatedCommitsApi.getCommits(tableId, "xx", startVersion, null, 100);
   }
 }

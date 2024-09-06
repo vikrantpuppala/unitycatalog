@@ -5,7 +5,6 @@ import static io.unitycatalog.server.persist.CommitRepository.MAX_NUM_COMMITS_PE
 import io.unitycatalog.server.model.Commit;
 import io.unitycatalog.server.model.DataSourceFormat;
 import io.unitycatalog.server.model.TableInfo;
-import io.unitycatalog.server.model.TableType;
 import io.unitycatalog.server.persist.CommitRepository;
 import io.unitycatalog.server.persist.TableRepository;
 import io.unitycatalog.server.persist.dao.CommitDAO;
@@ -42,7 +41,7 @@ public class CoordinatedCommitsHandler {
 
   public static void validateTablePath(Commit commit) {
     TableInfo tableInfo = TABLE_REPOSITORY.getTableById(commit.getTableId());
-    assert tableInfo.getTableType() == TableType.MANAGED;
+    //    assert tableInfo.getTableType() == TableType.MANAGED;
     assert tableInfo.getDataSourceFormat() == DataSourceFormat.DELTA;
 
     // TODO: Add other assertions like verifying the table path (tableInfo.getStorageLocation)

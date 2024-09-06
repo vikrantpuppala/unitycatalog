@@ -79,7 +79,7 @@ public abstract class BaseCoordinatedCommitsCRUDTest extends BaseCRUDTest {
         .tableId(tableId)
         .commitInfo(
             new CommitInfo()
-                .version(1L)
+                .version(version)
                 .fileName("file" + version)
                 .fileSize(100L)
                 .timestamp(1700000000L + version)
@@ -114,14 +114,20 @@ public abstract class BaseCoordinatedCommitsCRUDTest extends BaseCRUDTest {
         coordinatedCommitsOperations.getCommits(tableInfo.getTableId(), 0L);
     assertEquals(3, response.getCommits().size());
     assertEquals(3, response.getLatestTableVersion());
-    assertTrue(response.getCommits().contains(commit1));
-    assertTrue(response.getCommits().contains(commit2));
-    assertTrue(response.getCommits().contains(commit3));
+    assertTrue(response.getCommits().contains(commit1.getCommitInfo()));
+    assertTrue(response.getCommits().contains(commit2.getCommitInfo()));
+    assertTrue(response.getCommits().contains(commit3.getCommitInfo()));
+
+    response = coordinatedCommitsOperations.getCommits(tableInfo.getTableId(), 2L);
+    assertEquals(2, response.getCommits().size());
+    assertEquals(3, response.getLatestTableVersion());
+    assertFalse(response.getCommits().contains(commit1.getCommitInfo()));
+    assertTrue(response.getCommits().contains(commit2.getCommitInfo()));
+    assertTrue(response.getCommits().contains(commit3.getCommitInfo()));
 
     coordinatedCommitsOperations.commit(backfillOnlyCommit1);
     response = coordinatedCommitsOperations.getCommits(tableInfo.getTableId(), 0L);
-    assertEquals(2, response.getCommits().size());
-    assertTrue(response.getCommits().contains(commit3));
-    assertTrue(response.getCommits().contains(backfillOnlyCommit1));
+    assertEquals(1, response.getCommits().size());
+    assertTrue(response.getCommits().contains(commit3.getCommitInfo()));
   }
 }
