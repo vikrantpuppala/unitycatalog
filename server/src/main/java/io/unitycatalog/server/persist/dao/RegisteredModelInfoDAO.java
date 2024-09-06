@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 @Table(
     name = "uc_registered_models",
     indexes = {
-      @Index(name = "idx_name", columnList = "name"),
+      @Index(name = "registered_models_name_idx", columnList = "name"),
     })
 // Lombok annotations
 @Getter
