@@ -11,6 +11,7 @@ import io.unitycatalog.server.persist.utils.HibernateUtils;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
 import io.unitycatalog.server.persist.utils.RepositoryUtils;
 import io.unitycatalog.server.persist.utils.UriUtils;
+import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
 import org.hibernate.Session;
@@ -208,15 +209,19 @@ public class ModelRepository {
     ValidationUtils.validateSqlObjectName(createRegisteredModel.getName());
     long createTime = System.currentTimeMillis();
     String modelId = UUID.randomUUID().toString();
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
     RegisteredModelInfo registeredModelInfo =
         new RegisteredModelInfo()
-            .modelId(modelId)
+            .id(modelId)
             .name(createRegisteredModel.getName())
             .catalogName(createRegisteredModel.getCatalogName())
             .schemaName(createRegisteredModel.getSchemaName())
             .comment(createRegisteredModel.getComment())
+            .owner(callerId)
             .createdAt(createTime)
-            .updatedAt(createTime);
+            .createdBy(callerId)
+            .updatedAt(createTime)
+            .updatedBy(callerId);
     String fullName = getRegisteredModelFullName(registeredModelInfo);
     registeredModelInfo.setFullName(fullName);
     LOGGER.info("Creating Registered Model: " + fullName);
@@ -359,20 +364,21 @@ public class ModelRepository {
     return new ListRegisteredModelsResponse().registeredModels(result).nextPageToken(nextPageToken);
   }
 
-  public RegisteredModelInfo updateRegisteredModel(UpdateRegisteredModel updateRegisteredModel) {
+  public RegisteredModelInfo updateRegisteredModel(
+      String fullName, UpdateRegisteredModel updateRegisteredModel) {
     if (updateRegisteredModel.getNewName() != null) {
       ValidationUtils.validateSqlObjectName(updateRegisteredModel.getNewName());
     }
-    if (updateRegisteredModel.getFullName() == null) {
+    if (fullName == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No three tier full name specified.");
     }
     if (updateRegisteredModel.getNewName() == null && updateRegisteredModel.getComment() == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No updated fields defined.");
     }
 
-    String fullName = updateRegisteredModel.getFullName();
     LOGGER.info("Updating Registered Model: " + fullName);
     RegisteredModelInfo registeredModelInfo;
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -409,6 +415,7 @@ public class ModelRepository {
         }
         long updatedTime = System.currentTimeMillis();
         origRegisteredModelInfoDAO.setUpdatedAt(new Date(updatedTime));
+        origRegisteredModelInfoDAO.setUpdatedBy(callerId);
         session.persist(origRegisteredModelInfoDAO);
         registeredModelInfo = origRegisteredModelInfoDAO.toRegisteredModelInfo();
         registeredModelInfo.setCatalogName(catalogName);
@@ -524,13 +531,14 @@ public class ModelRepository {
 
   public ModelVersionInfo createModelVersion(CreateModelVersion createModelVersion) {
     long createTime = System.currentTimeMillis();
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
     String modelVersionId = UUID.randomUUID().toString();
     String catalogName = createModelVersion.getCatalogName();
     String schemaName = createModelVersion.getSchemaName();
     String modelName = createModelVersion.getModelName();
     ModelVersionInfo modelVersionInfo =
         new ModelVersionInfo()
-            .modelVersionId(modelVersionId)
+            .id(modelVersionId)
             .modelName(createModelVersion.getModelName())
             .catalogName(createModelVersion.getCatalogName())
             .schemaName(createModelVersion.getSchemaName())
@@ -539,7 +547,9 @@ public class ModelRepository {
             .status(ModelVersionStatus.PENDING_REGISTRATION)
             .comment(createModelVersion.getComment())
             .createdAt(createTime)
-            .updatedAt(createTime);
+            .createdBy(callerId)
+            .updatedAt(createTime)
+            .updatedBy(callerId);
     String registeredModelFullName = getRegisteredModelFullName(catalogName, schemaName, modelName);
     LOGGER.info("Creating Registered Model: " + registeredModelFullName);
 
@@ -668,23 +678,22 @@ public class ModelRepository {
     }
   }
 
-  public ModelVersionInfo updateModelVersion(UpdateModelVersion updateModelVersion) {
-    if (updateModelVersion.getFullName() == null) {
+  public ModelVersionInfo updateModelVersion(
+      String fullName, Long version, UpdateModelVersion updateModelVersion) {
+    if (fullName == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No model specified.");
     }
-    if (updateModelVersion.getVersion() == null || updateModelVersion.getVersion() < 1) {
+    if (version == null || version < 1) {
       throw new BaseException(
-          ErrorCode.INVALID_ARGUMENT,
-          "No valid model version specified: " + updateModelVersion.getVersion());
+          ErrorCode.INVALID_ARGUMENT, "No valid model version specified: " + version);
     }
     if (updateModelVersion.getComment() == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No updated fields defined.");
     }
 
-    String fullName = updateModelVersion.getFullName();
-    Long version = updateModelVersion.getVersion();
     LOGGER.info("Updating Model Version: " + fullName + "/" + version);
     ModelVersionInfo modelVersionInfo;
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -702,6 +711,7 @@ public class ModelRepository {
         origModelVersionInfoDAO.setComment(updateModelVersion.getComment());
         long updatedTime = System.currentTimeMillis();
         origModelVersionInfoDAO.setUpdatedAt(new Date(updatedTime));
+        origModelVersionInfoDAO.setUpdatedBy(callerId);
         session.persist(origModelVersionInfoDAO);
         modelVersionInfo = origModelVersionInfoDAO.toModelVersionInfo();
         modelVersionInfo.setCatalogName(catalogName);
@@ -774,6 +784,7 @@ public class ModelRepository {
     Long version = finalizeModelVersion.getVersion();
     LOGGER.info("Finalize Model Version: " + fullName + "/" + version);
     ModelVersionInfo modelVersionInfo;
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -797,6 +808,7 @@ public class ModelRepository {
         origModelVersionInfoDAO.setStatus(ModelVersionStatus.READY.toString());
         long updatedTime = System.currentTimeMillis();
         origModelVersionInfoDAO.setUpdatedAt(new Date(updatedTime));
+        origModelVersionInfoDAO.setUpdatedBy(callerId);
         session.persist(origModelVersionInfoDAO);
         modelVersionInfo = origModelVersionInfoDAO.toModelVersionInfo();
         modelVersionInfo.setCatalogName(catalogName);
