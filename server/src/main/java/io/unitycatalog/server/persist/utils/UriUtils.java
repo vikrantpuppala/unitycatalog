@@ -10,7 +10,8 @@ import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.AwsCredentials;
 import io.unitycatalog.server.model.AzureUserDelegationSAS;
 import io.unitycatalog.server.model.GcpOauthToken;
-import io.unitycatalog.server.model.GenerateTemporaryModelVersionCredentialsResponse;
+import io.unitycatalog.server.model.TemporaryCredentials;
+import io.unitycatalog.server.utils.ServerProperties;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 public class UriUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(UriUtils.class);
-  private static final ServerPropertiesUtils properties = ServerPropertiesUtils.getInstance();
+  private static final ServerProperties properties = ServerProperties.getInstance();
 
   private enum Operation {
     CREATE,
@@ -101,9 +102,7 @@ public class UriUtils {
   }
 
   private static URI updateDirectoryFromUri(
-      String uri,
-      Operation op,
-      Optional<GenerateTemporaryModelVersionCredentialsResponse> credentials) {
+      String uri, Operation op, Optional<TemporaryCredentials> credentials) {
     URI parsedUri = URI.create(uri);
     validateURI(parsedUri);
     try {
@@ -165,7 +164,7 @@ public class UriUtils {
       // Create the directory
       try {
         Files.createDirectories(dirPath);
-        LOGGER.debug("Directory created successfully: " + dirPath);
+        LOGGER.debug("Directory created successfully: {}", dirPath);
       } catch (Exception e) {
         throw new BaseException(ErrorCode.INTERNAL, "Failed to create directory: " + dirPath, e);
       }

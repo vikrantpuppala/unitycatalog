@@ -21,6 +21,7 @@ public enum CliParams {
       "The storage location associated with the table. Need to be specified for external tables.",
       "storage_location"),
   MAX_RESULTS("max_results", "The maximum number of results to return.", "max_results"),
+  PAGE_TOKEN("page_token", "Opaque token to retrieve the next page of results.", "page_token"),
   TABLE_TYPE(
       "table_type",
       "The type of the table. Supported values are MANAGED and EXTERNAL. For create table only EXTERNAL tables are supported in this CLI example.",
@@ -52,7 +53,7 @@ public enum CliParams {
       "output"),
   VERSION("version", "Version number of a registered model entity.", "version"),
   FORCE("force", "To force delete the entity", "force"),
-  RESOURCE_TYPE("resource_type", "The type of the resource", "resource_type"),
+  SECURABLE_TYPE("securable_type", "The type of the securable", "securable_type"),
   PRINCIPAL("principal", "The target principal of the permission change", "principal"),
   PRIVILEGE("privilege", "The privilege to grant or revoke", "privilege"),
   ID("id", "The unique id of the user", "id"),
@@ -60,9 +61,7 @@ public enum CliParams {
   EMAIL("email", "The email address for the user", "email"),
   FILTER("filter", "Query by which the results have to be filtered", "filter"),
   START_INDEX(
-      "startIndex",
-      "Specifies the index of the first result. First item is number 1",
-      "startIndex"),
+      "start_index", "Specifies the index (starting at 1) of the first result.", "startIndex"),
   COUNT("count", "Desired number of results per page", "count");
   private final String value;
   private final String helpMessage;

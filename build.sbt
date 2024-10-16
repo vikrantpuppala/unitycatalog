@@ -3,7 +3,7 @@ import java.io.File
 import Tarball.createTarballSettings
 import sbt.util
 import sbtlicensereport.license.{DepModuleInfo, LicenseCategory, LicenseInfo}
-import ReleaseSettings.{javaOnlyReleaseSettings, rootReleaseSettings, skipReleaseSettings}
+import ReleaseSettings.*
 
 import scala.language.implicitConversions
 
@@ -18,6 +18,9 @@ lazy val javacRelease17 = Seq("--release", "17")
 
 lazy val scala212 = "2.12.15"
 lazy val scala213 = "2.13.14"
+
+lazy val deltaVersion = "3.2.1"
+lazy val sparkVersion = "3.5.3"
 
 lazy val commonSettings = Seq(
   organization := orgName,
@@ -81,6 +84,7 @@ lazy val commonSettings = Seq(
     case DepModuleInfo("org.hibernate.orm", _, _) => true
     case DepModuleInfo("com.unboundid.scim2", _, _) => true
     case DepModuleInfo("com.unboundid.product.scim2", _, _) => true
+    case DepModuleInfo("com.googlecode.aviator", _, _) => true
     // Duo license:
     //  - Eclipse Public License 2.0
     //  - GNU General Public License, version 2 with the GNU Classpath Exception
@@ -111,7 +115,7 @@ def javaCheckstyleSettings(configLocation: File) = Seq(
 
 // enforce java code style
 def javafmtCheckSettings() = Seq(
-  (Compile / compile) := ((Compile / compile) dependsOn (Compile / javafmtCheckAll)).value
+  (Compile / compile) := ((Compile / compile) dependsOn (Compile / javafmtAll)).value
 )
 
 lazy val controlApi = (project in file("target/control/java"))
@@ -120,7 +124,7 @@ lazy val controlApi = (project in file("target/control/java"))
   .settings(
     name := s"$artifactNamePrefix-controlapi",
     commonSettings,
-    javaOnlyReleaseSettings,
+    skipReleaseSettings,
     libraryDependencies ++= Seq(
       "jakarta.annotation" % "jakarta.annotation-api" % "3.0.0" % Provided,
       "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonVersion,
@@ -159,7 +163,6 @@ lazy val controlApi = (project in file("target/control/java"))
 lazy val client = (project in file("target/clients/java"))
   .enablePlugins(OpenApiGeneratorPlugin)
   .disablePlugins(JavaFormatterPlugin)
-  .dependsOn(controlApi % "compile->compile")
   .settings(
     name := s"$artifactNamePrefix-client",
     commonSettings,
@@ -224,7 +227,7 @@ lazy val apiDocs = (project in file("api"))
   .enablePlugins(OpenApiGeneratorPlugin)
   .settings(
     name := s"$artifactNamePrefix-docs",
-
+    skipReleaseSettings,
     // OpenAPI generation specs
     openApiInputSpec := (file("api") / "all.yaml").toString,
     openApiGeneratorName := "markdown",
@@ -299,6 +302,10 @@ lazy val server = (project in file("server"))
 
       // Auth dependencies
       "com.unboundid.product.scim2" % "scim2-sdk-common" % "3.1.0",
+      "org.casbin" % "jcasbin" % "1.55.0",
+      "org.casbin" % "jdbc-adapter" % "2.7.0"
+        exclude("com.microsoft.sqlserver", "mssql-jdbc")
+        exclude("com.oracle.database.jdbc", "ojdbc6"),
       "org.springframework" % "spring-expression" % "6.1.11",
       "com.auth0" % "java-jwt" % "4.4.0",
       "com.auth0" % "jwks-rsa" % "0.22.1",
@@ -343,6 +350,7 @@ lazy val serverModels = (project in file("server") / "target" / "models")
   .settings(
     name := s"$artifactNamePrefix-servermodels",
     commonSettings,
+    skipReleaseSettings,
     (Compile / compile) := ((Compile / compile) dependsOn generate).value,
     Compile / compile / javacOptions ++= javacRelease17,
     libraryDependencies ++= Seq(
@@ -378,6 +386,7 @@ lazy val controlModels = (project in file("server") / "target" / "controlmodels"
   .settings(
     name := s"$artifactNamePrefix-controlmodels",
     commonSettings,
+    skipReleaseSettings,
     (Compile / compile) := ((Compile / compile) dependsOn generate).value,
     Compile / compile / javacOptions ++= javacRelease17,
     libraryDependencies ++= Seq(
@@ -410,6 +419,7 @@ lazy val controlModels = (project in file("server") / "target" / "controlmodels"
 lazy val cli = (project in file("examples") / "cli")
   .dependsOn(server % "test->test")
   .dependsOn(client % "compile->compile;test->test")
+  .dependsOn(controlApi % "compile->compile")
   .settings(
     name := s"$artifactNamePrefix-cli",
     mainClass := Some(orgName + ".cli.UnityCatalogCli"),
@@ -425,10 +435,9 @@ lazy val cli = (project in file("examples") / "cli")
       "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
       "org.openapitools" % "jackson-databind-nullable" % openApiToolsJacksonBindNullableVersion,
       "org.yaml" % "snakeyaml" % "2.2",
-
-      "io.delta" % "delta-kernel-api" % "3.2.0",
-      "io.delta" % "delta-kernel-defaults" % "3.2.0",
-      "io.delta" % "delta-storage" % "3.2.0",
+      "io.delta" % "delta-kernel-api" % deltaVersion,
+      "io.delta" % "delta-kernel-defaults" % deltaVersion,
+      "io.delta" % "delta-storage" % deltaVersion,
       "org.apache.hadoop" % "hadoop-client-api" % "3.4.0",
       "org.apache.hadoop" % "hadoop-client-runtime" % "3.4.0",
       "de.vandermeer" % "asciitable" % "0.3.2",
@@ -473,7 +482,6 @@ lazy val serverShaded = (project in file("server-shaded"))
     }
   )
 
-val sparkVersion = "3.5.1"
 lazy val spark = (project in file("connectors/spark"))
   .dependsOn(client)
   .settings(
@@ -481,13 +489,14 @@ lazy val spark = (project in file("connectors/spark"))
     scalaVersion := scala212,
     crossScalaVersions := Seq(scala212, scala213),
     commonSettings,
+    scalaReleaseSettings,
     javaOptions ++= Seq(
       "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
     ),
     javaCheckstyleSettings(file("dev/checkstyle-config.xml")),
     Compile / compile / javacOptions ++= javacRelease11,
     libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.apache.spark" %% "spark-sql" % sparkVersion % Provided,
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.0",
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.0",
       "com.fasterxml.jackson.core" % "jackson-annotations" % "2.15.0",
@@ -507,7 +516,7 @@ lazy val spark = (project in file("connectors/spark"))
       "org.mockito" % "mockito-junit-jupiter" % "5.12.0" % Test,
       "net.aichler" % "jupiter-interface" % JupiterKeys.jupiterVersion.value % Test,
       "org.apache.hadoop" % "hadoop-client-runtime" % "3.4.0",
-      "io.delta" %% "delta-spark" % "3.2.0" % Test,
+      "io.delta" %% "delta-spark" % deltaVersion % Test,
     ),
     dependencyOverrides ++= Seq(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.0",

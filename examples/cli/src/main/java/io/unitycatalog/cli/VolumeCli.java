@@ -9,7 +9,7 @@ import io.unitycatalog.cli.utils.CliParams;
 import io.unitycatalog.cli.utils.CliUtils;
 import io.unitycatalog.client.ApiClient;
 import io.unitycatalog.client.ApiException;
-import io.unitycatalog.client.api.TemporaryVolumeCredentialsApi;
+import io.unitycatalog.client.api.TemporaryCredentialsApi;
 import io.unitycatalog.client.api.VolumesApi;
 import io.unitycatalog.client.model.*;
 import java.io.*;
@@ -29,7 +29,7 @@ public class VolumeCli {
   public static void handle(CommandLine cmd, ApiClient apiClient)
       throws JsonProcessingException, ApiException {
     VolumesApi volumesApi = new VolumesApi(apiClient);
-    TemporaryVolumeCredentialsApi tempCredApi = new TemporaryVolumeCredentialsApi(apiClient);
+    TemporaryCredentialsApi tempCredApi = new TemporaryCredentialsApi(apiClient);
     String[] subArgs = cmd.getArgs();
     objectWriter = CliUtils.getObjectWriter(cmd);
     String subCommand = subArgs[1];
@@ -82,8 +82,12 @@ public class VolumeCli {
     if (json.has(CliParams.MAX_RESULTS.getServerParam())) {
       maxResults = json.getInt(CliParams.MAX_RESULTS.getServerParam());
     }
+    String pageToken = null;
+    if (json.has(CliParams.PAGE_TOKEN.getServerParam())) {
+      pageToken = json.getString(CliParams.PAGE_TOKEN.getServerParam());
+    }
     return objectWriter.writeValueAsString(
-        volumesApi.listVolumes(catalogName, schemaName, maxResults, null).getVolumes());
+        volumesApi.listVolumes(catalogName, schemaName, maxResults, pageToken).getVolumes());
   }
 
   private static String getVolume(VolumesApi volumesApi, JSONObject json)
@@ -93,7 +97,7 @@ public class VolumeCli {
   }
 
   private static String writeRandomFileInVolume(
-      VolumesApi volumesApi, TemporaryVolumeCredentialsApi tempCredApi, JSONObject json)
+      VolumesApi volumesApi, TemporaryCredentialsApi tempCredApi, JSONObject json)
       throws ApiException {
     String volumeFullName = json.getString(CliParams.FULL_NAME.getServerParam());
     VolumeInfo volumeInfo = volumesApi.getVolume(volumeFullName);
@@ -146,7 +150,7 @@ public class VolumeCli {
   }
 
   private static String readVolume(
-      VolumesApi volumesApi, TemporaryVolumeCredentialsApi tempCredApi, JSONObject json)
+      VolumesApi volumesApi, TemporaryCredentialsApi tempCredApi, JSONObject json)
       throws ApiException {
     String volumeFullName = json.getString(CliParams.FULL_NAME.getServerParam());
     VolumeInfo volumeInfo = volumesApi.getVolume(volumeFullName);

@@ -11,6 +11,7 @@ import io.unitycatalog.server.persist.utils.HibernateUtils;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
 import io.unitycatalog.server.persist.utils.RepositoryUtils;
 import io.unitycatalog.server.persist.utils.UriUtils;
+import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
 import org.hibernate.Session;
@@ -40,7 +41,7 @@ public class ModelRepository {
     query.setParameter("schemaId", schemaId);
     query.setParameter("name", name);
     query.setMaxResults(1);
-    LOGGER.info("Finding registered model by schemaId: " + schemaId + " and name: " + name);
+    LOGGER.info("Finding registered model by schemaId: {} and name: {}", schemaId, name);
     return query.uniqueResult(); // Returns null if no result is found
   }
 
@@ -74,8 +75,7 @@ public class ModelRepository {
     query.setParameter("registeredModelId", modelId);
     query.setParameter("version", version.toString());
     query.setMaxResults(1);
-    LOGGER.info(
-        "Finding model version by registeredModelId: " + modelId + " and version: " + version);
+    LOGGER.info("Finding model version by registeredModelId: {} and version: {}", modelId, version);
     return query.uniqueResult(); // Returns null if no result is found
   }
 
@@ -106,7 +106,7 @@ public class ModelRepository {
     query.setParameter("registeredModelId", registeredModelId);
     query.setParameter("token", Long.parseLong(token));
     query.setMaxResults(maxResults);
-    LOGGER.info("Finding model versions by registeredModelId: " + registeredModelId);
+    LOGGER.info("Finding model versions by registeredModelId: {}", registeredModelId);
     return query.getResultList(); // Returns null if no result is found
   }
 
@@ -135,7 +135,7 @@ public class ModelRepository {
 
   /** **************** Registered Model handlers ***************** */
   public RegisteredModelInfo getRegisteredModelById(String registeredModelId) {
-    LOGGER.info("Getting registered model by id: " + registeredModelId);
+    LOGGER.info("Getting registered model by id: {}", registeredModelId);
     try (Session session = SESSION_FACTORY.openSession()) {
       session.setDefaultReadOnly(true);
       Transaction tx = session.beginTransaction();
@@ -168,7 +168,7 @@ public class ModelRepository {
   }
 
   public RegisteredModelInfo getRegisteredModel(String fullName) {
-    LOGGER.info("Getting registered model: " + fullName);
+    LOGGER.info("Getting registered model: {}", fullName);
     RegisteredModelInfo registeredModelInfo = null;
     try (Session session = SESSION_FACTORY.openSession()) {
       session.setDefaultReadOnly(true);
@@ -208,18 +208,22 @@ public class ModelRepository {
     ValidationUtils.validateSqlObjectName(createRegisteredModel.getName());
     long createTime = System.currentTimeMillis();
     String modelId = UUID.randomUUID().toString();
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
     RegisteredModelInfo registeredModelInfo =
         new RegisteredModelInfo()
-            .modelId(modelId)
+            .id(modelId)
             .name(createRegisteredModel.getName())
             .catalogName(createRegisteredModel.getCatalogName())
             .schemaName(createRegisteredModel.getSchemaName())
             .comment(createRegisteredModel.getComment())
+            .owner(callerId)
             .createdAt(createTime)
-            .updatedAt(createTime);
+            .createdBy(callerId)
+            .updatedAt(createTime)
+            .updatedBy(callerId);
     String fullName = getRegisteredModelFullName(registeredModelInfo);
     registeredModelInfo.setFullName(fullName);
-    LOGGER.info("Creating Registered Model: " + fullName);
+    LOGGER.info("Creating Registered Model: {}", fullName);
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -253,10 +257,9 @@ public class ModelRepository {
             // UriUtils.deleteStorageLocationPath(storageLocation);
           } catch (Exception deleteErr) {
             LOGGER.error(
-                "Unable to delete storage location "
-                    + storageLocation
-                    + " during rollback: "
-                    + deleteErr.getMessage());
+                "Unable to delete storage location {} during rollback: {}",
+                storageLocation,
+                deleteErr.getMessage());
           }
           tx.rollback();
         }
@@ -320,7 +323,7 @@ public class ModelRepository {
               .registeredModels(result)
               .nextPageToken(nextPageToken);
         } else {
-          LOGGER.info("Listing registered models in " + catalogName.get() + "." + schemaName.get());
+          LOGGER.info("Listing registered models in {}.{}", catalogName.get(), schemaName.get());
           UUID schemaId = RepositoryUtils.getSchemaId(session, catalogName.get(), schemaName.get());
           response =
               listRegisteredModels(
@@ -359,20 +362,21 @@ public class ModelRepository {
     return new ListRegisteredModelsResponse().registeredModels(result).nextPageToken(nextPageToken);
   }
 
-  public RegisteredModelInfo updateRegisteredModel(UpdateRegisteredModel updateRegisteredModel) {
+  public RegisteredModelInfo updateRegisteredModel(
+      String fullName, UpdateRegisteredModel updateRegisteredModel) {
     if (updateRegisteredModel.getNewName() != null) {
       ValidationUtils.validateSqlObjectName(updateRegisteredModel.getNewName());
     }
-    if (updateRegisteredModel.getFullName() == null) {
+    if (fullName == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No three tier full name specified.");
     }
     if (updateRegisteredModel.getNewName() == null && updateRegisteredModel.getComment() == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No updated fields defined.");
     }
 
-    String fullName = updateRegisteredModel.getFullName();
-    LOGGER.info("Updating Registered Model: " + fullName);
+    LOGGER.info("Updating Registered Model: {}", fullName);
     RegisteredModelInfo registeredModelInfo;
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -409,6 +413,7 @@ public class ModelRepository {
         }
         long updatedTime = System.currentTimeMillis();
         origRegisteredModelInfoDAO.setUpdatedAt(new Date(updatedTime));
+        origRegisteredModelInfoDAO.setUpdatedBy(callerId);
         session.persist(origRegisteredModelInfoDAO);
         registeredModelInfo = origRegisteredModelInfoDAO.toRegisteredModelInfo();
         registeredModelInfo.setCatalogName(catalogName);
@@ -432,7 +437,7 @@ public class ModelRepository {
   }
 
   public void deleteRegisteredModel(String fullName, boolean force) {
-    LOGGER.info("Deleting Registered Model: " + fullName);
+    LOGGER.info("Deleting Registered Model: {}", fullName);
     try (Session session = SESSION_FACTORY.openSession()) {
       Transaction tx = session.beginTransaction();
       String[] parts = fullName.split("\\.");
@@ -486,7 +491,7 @@ public class ModelRepository {
 
   /** **************** Model version handlers ***************** */
   public ModelVersionInfo getModelVersion(String fullName, long version) {
-    LOGGER.info("Getting model version: " + fullName + "/" + version);
+    LOGGER.info("Getting model version: {}/{}", fullName, version);
     ModelVersionInfo modelVersionInfo = null;
     try (Session session = SESSION_FACTORY.openSession()) {
       session.setDefaultReadOnly(true);
@@ -524,13 +529,14 @@ public class ModelRepository {
 
   public ModelVersionInfo createModelVersion(CreateModelVersion createModelVersion) {
     long createTime = System.currentTimeMillis();
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
     String modelVersionId = UUID.randomUUID().toString();
     String catalogName = createModelVersion.getCatalogName();
     String schemaName = createModelVersion.getSchemaName();
     String modelName = createModelVersion.getModelName();
     ModelVersionInfo modelVersionInfo =
         new ModelVersionInfo()
-            .modelVersionId(modelVersionId)
+            .id(modelVersionId)
             .modelName(createModelVersion.getModelName())
             .catalogName(createModelVersion.getCatalogName())
             .schemaName(createModelVersion.getSchemaName())
@@ -539,9 +545,11 @@ public class ModelRepository {
             .status(ModelVersionStatus.PENDING_REGISTRATION)
             .comment(createModelVersion.getComment())
             .createdAt(createTime)
-            .updatedAt(createTime);
+            .createdBy(callerId)
+            .updatedAt(createTime)
+            .updatedBy(callerId);
     String registeredModelFullName = getRegisteredModelFullName(catalogName, schemaName, modelName);
-    LOGGER.info("Creating Registered Model: " + registeredModelFullName);
+    LOGGER.info("Creating Registered Model: {}", registeredModelFullName);
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -582,10 +590,9 @@ public class ModelRepository {
             // UriUtils.deleteStorageLocationPath(storageLocation);
           } catch (Exception deleteErr) {
             LOGGER.error(
-                "Unable to delete storage location "
-                    + storageLocation
-                    + " during rollback: "
-                    + deleteErr.getMessage());
+                "Unable to delete storage location {} during rollback: {}",
+                storageLocation,
+                deleteErr.getMessage());
           }
           tx.rollback();
         }
@@ -605,7 +612,7 @@ public class ModelRepository {
 
   public ListModelVersionsResponse listModelVersions(
       String registeredModelFullName, Optional<Integer> maxResults, Optional<String> pageToken) {
-    LOGGER.info("Listing model versions in " + registeredModelFullName);
+    LOGGER.info("Listing model versions in {}", registeredModelFullName);
     if (maxResults.isPresent() && maxResults.get() < 0) {
       throw new BaseException(
           ErrorCode.INVALID_ARGUMENT, "maxResults must be greater than or equal to 0");
@@ -615,7 +622,7 @@ public class ModelRepository {
         Long.parseLong(pageToken.get());
       } catch (NumberFormatException e) {
         throw new BaseException(
-            ErrorCode.INVALID_ARGUMENT, "Invalid page token recieved: " + pageToken.get());
+            ErrorCode.INVALID_ARGUMENT, "Invalid page token received: " + pageToken.get());
       }
     }
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -668,23 +675,22 @@ public class ModelRepository {
     }
   }
 
-  public ModelVersionInfo updateModelVersion(UpdateModelVersion updateModelVersion) {
-    if (updateModelVersion.getFullName() == null) {
+  public ModelVersionInfo updateModelVersion(
+      String fullName, Long version, UpdateModelVersion updateModelVersion) {
+    if (fullName == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No model specified.");
     }
-    if (updateModelVersion.getVersion() == null || updateModelVersion.getVersion() < 1) {
+    if (version == null || version < 1) {
       throw new BaseException(
-          ErrorCode.INVALID_ARGUMENT,
-          "No valid model version specified: " + updateModelVersion.getVersion());
+          ErrorCode.INVALID_ARGUMENT, "No valid model version specified: " + version);
     }
     if (updateModelVersion.getComment() == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "No updated fields defined.");
     }
 
-    String fullName = updateModelVersion.getFullName();
-    Long version = updateModelVersion.getVersion();
-    LOGGER.info("Updating Model Version: " + fullName + "/" + version);
+    LOGGER.info("Updating Model Version: {}/{}", fullName, version);
     ModelVersionInfo modelVersionInfo;
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -702,6 +708,7 @@ public class ModelRepository {
         origModelVersionInfoDAO.setComment(updateModelVersion.getComment());
         long updatedTime = System.currentTimeMillis();
         origModelVersionInfoDAO.setUpdatedAt(new Date(updatedTime));
+        origModelVersionInfoDAO.setUpdatedBy(callerId);
         session.persist(origModelVersionInfoDAO);
         modelVersionInfo = origModelVersionInfoDAO.toModelVersionInfo();
         modelVersionInfo.setCatalogName(catalogName);
@@ -725,7 +732,7 @@ public class ModelRepository {
   }
 
   public void deleteModelVersion(String fullName, Long version) {
-    LOGGER.info("Deleting model version: " + fullName + "/" + version);
+    LOGGER.info("Deleting model version: {}/{}", fullName, version);
     String[] parts = fullName.split("\\.");
     if (parts.length != 3) {
       throw new BaseException(
@@ -772,8 +779,9 @@ public class ModelRepository {
 
     String fullName = finalizeModelVersion.getFullName();
     Long version = finalizeModelVersion.getVersion();
-    LOGGER.info("Finalize Model Version: " + fullName + "/" + version);
+    LOGGER.info("Finalize Model Version: {}/{}", fullName, version);
     ModelVersionInfo modelVersionInfo;
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     Transaction tx;
     try (Session session = SESSION_FACTORY.openSession()) {
@@ -797,6 +805,7 @@ public class ModelRepository {
         origModelVersionInfoDAO.setStatus(ModelVersionStatus.READY.toString());
         long updatedTime = System.currentTimeMillis();
         origModelVersionInfoDAO.setUpdatedAt(new Date(updatedTime));
+        origModelVersionInfoDAO.setUpdatedBy(callerId);
         session.persist(origModelVersionInfoDAO);
         modelVersionInfo = origModelVersionInfoDAO.toModelVersionInfo();
         modelVersionInfo.setCatalogName(catalogName);

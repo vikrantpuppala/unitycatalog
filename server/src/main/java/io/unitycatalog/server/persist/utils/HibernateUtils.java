@@ -1,8 +1,10 @@
 package io.unitycatalog.server.persist.utils;
 
 import io.unitycatalog.server.persist.dao.*;
+import io.unitycatalog.server.utils.ServerProperties;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 import lombok.Getter;
@@ -18,10 +20,11 @@ public class HibernateUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(HibernateUtils.class);
 
   @Getter private static final SessionFactory sessionFactory;
-  private static final ServerPropertiesUtils properties;
+  private static final ServerProperties properties;
+  @Getter private static final Properties hibernateProperties = new Properties();
 
   static {
-    properties = ServerPropertiesUtils.getInstance();
+    properties = ServerProperties.getInstance();
     sessionFactory = createSessionFactory();
   }
 
@@ -31,18 +34,26 @@ public class HibernateUtils {
         throw new RuntimeException("PropertiesUtil instance is null in createSessionFactory");
       }
 
-      Properties hibernateProperties = new Properties();
-      try (InputStream input = Files.newInputStream(Paths.get("etc/conf/hibernate.properties"))) {
+      Path hibernatePropertiesPath = Paths.get("etc/conf/hibernate.properties");
+      if (!hibernatePropertiesPath.toFile().exists()) {
+        LOGGER.warn("Hibernate properties file not found: {}", hibernatePropertiesPath);
+        hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
+        hibernateProperties.setProperty(
+            "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
+        hibernateProperties.setProperty("hibernate.hbm2ddl.auto", "update");
+      } else {
+        InputStream input = Files.newInputStream(hibernatePropertiesPath);
         hibernateProperties.load(input);
       }
-      Configuration configuration = new Configuration().setProperties(hibernateProperties);
+
       if ("test".equals(properties.getProperty("server.env"))) {
-        configuration.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
-        configuration.setProperty(
+        hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
+        hibernateProperties.setProperty(
             "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
-        configuration.setProperty("hibernate.hbm2ddl.auto", "create-drop");
+        hibernateProperties.setProperty("hibernate.hbm2ddl.auto", "create-drop");
         LOGGER.debug("Hibernate configuration set for testing");
       }
+      Configuration configuration = new Configuration().setProperties(hibernateProperties);
 
       // Add annotated classes
       configuration.addAnnotatedClass(CatalogInfoDAO.class);
@@ -56,6 +67,8 @@ public class HibernateUtils {
       configuration.addAnnotatedClass(FunctionParameterInfoDAO.class);
       configuration.addAnnotatedClass(VolumeInfoDAO.class);
       configuration.addAnnotatedClass(UserDAO.class);
+      configuration.addAnnotatedClass(MetastoreDAO.class);
+      configuration.addAnnotatedClass(CommitDAO.class);
 
       ServiceRegistry serviceRegistry =
           new StandardServiceRegistryBuilder().applySettings(configuration.getProperties()).build();
