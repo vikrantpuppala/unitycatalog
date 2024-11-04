@@ -167,7 +167,7 @@ public abstract class BaseModelCRUDTest extends BaseCRUDTest {
     UpdateRegisteredModel updateModel2 = new UpdateRegisteredModel().comment(MODEL_NEW_COMMENT);
     RegisteredModelInfo updatedRegisteredModelInfo2 =
         modelOperations.updateRegisteredModel(MODEL_NEW_FULL_NAME, updateModel2);
-    assertThat(updatedRegisteredModelInfo.getId()).isEqualTo(updatedRegisteredModelInfo.getId());
+    assertThat(updatedRegisteredModelInfo2.getId()).isEqualTo(updatedRegisteredModelInfo.getId());
     assertThat(updatedRegisteredModelInfo2.getName()).isEqualTo(MODEL_NEW_NAME);
     assertThat(updatedRegisteredModelInfo2.getComment()).isEqualTo(updateModel2.getComment());
     assertThat(updatedRegisteredModelInfo2.getFullName()).isEqualTo(MODEL_NEW_FULL_NAME);
@@ -183,7 +183,7 @@ public abstract class BaseModelCRUDTest extends BaseCRUDTest {
     assertThat(updatedRegisteredModelInfo3.getCatalogName()).isEqualTo(CATALOG_NEW_NAME);
 
     // Delete registered model
-    System.out.println("Testing delete registerd model..");
+    System.out.println("Testing delete registered model..");
     modelOperations.deleteRegisteredModel(
         CATALOG_NEW_NAME + "." + SCHEMA_NAME + "." + MODEL_NEW_NAME, Optional.of(false));
     assertThat(
