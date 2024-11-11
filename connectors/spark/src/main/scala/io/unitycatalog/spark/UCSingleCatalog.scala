@@ -119,7 +119,7 @@ class UCSingleCatalog extends TableCatalog with SupportsNamespaces with Logging 
       newProps.put("delta.coordinatedCommits.commitCoordinatorConf-preview",
         JsonUtils.toJson(Map("ucMetastoreId" -> new MetastoresApi(apiClient).summary().getMetastoreId)))
       newProps.put("delta.coordinatedCommits.commitCoordinator-preview",
-        "org.apache.spark.sql.delta.coordinatedcommits.UCCommitCoordinatorBuilder")
+        "unity-catalog")
       delegate.createTable(ident, columns, partitions, newProps)
     } else if (hasLocationClause) {
       val location = properties.get(TableCatalog.PROP_LOCATION)

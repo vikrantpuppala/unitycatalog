@@ -10,6 +10,7 @@ import io.unitycatalog.server.model.TableInfo;
 import io.unitycatalog.server.persist.CommitRepository;
 import io.unitycatalog.server.persist.TableRepository;
 import io.unitycatalog.server.persist.dao.CommitDAO;
+import io.unitycatalog.server.persist.utils.FileUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.Objects;
 import java.util.UUID;
@@ -67,7 +68,7 @@ public class CoordinatedCommitsHandler {
         "Only delta tables are supported for coordinated commits");
     ValidationUtils.validateEquals(
         tableInfo.getStorageLocation(),
-        commit.getTableUri(),
+        FileUtils.toStandardizedURIString(commit.getTableUri()),
         "Table URI in commit does not match the table path");
   }
 
