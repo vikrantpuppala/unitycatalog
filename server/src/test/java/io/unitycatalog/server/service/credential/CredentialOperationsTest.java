@@ -10,6 +10,7 @@ import io.unitycatalog.server.model.AwsCredentials;
 import io.unitycatalog.server.model.TemporaryCredentials;
 import io.unitycatalog.server.service.credential.aws.S3StorageConfig;
 import io.unitycatalog.server.service.credential.azure.ADLSStorageConfig;
+import io.unitycatalog.server.service.credential.gcp.GCSStorageConfig;
 import io.unitycatalog.server.utils.ServerProperties;
 import java.util.Map;
 import java.util.Set;
@@ -116,10 +117,16 @@ public class CredentialOperationsTest {
   @Test
   public void testGenerateGcpTemporaryCredentials() {
     try (MockedStatic<ServerProperties> mockedStatic = mockStatic(ServerProperties.class)) {
+      String gcsBucketPath = "gs://uctest";
       mockedStatic.when(ServerProperties::getInstance).thenReturn(serverProperties);
       // Test mode used
+      GCSStorageConfig gcsStorageConfig = GCSStorageConfig
+              .builder()
+              .bucketPath(gcsBucketPath)
+              .serviceAccountKeyJsonFilePath("")
+              .build();
       when(serverProperties.getGcsConfigurations())
-          .thenReturn(Map.of("gs://uctest", "testing://test"));
+          .thenReturn(Map.of(gcsBucketPath, gcsStorageConfig));
       credentialsOperations = new CredentialOperations();
       TemporaryCredentials gcpTemporaryCredentials =
           credentialsOperations.vendCredential(
@@ -127,7 +134,13 @@ public class CredentialOperationsTest {
       assertThat(gcpTemporaryCredentials.getGcpOauthToken().getOauthToken()).isNotNull();
 
       // Use default creds
-      when(serverProperties.getGcsConfigurations()).thenReturn(Map.of("gs://uctest", ""));
+      GCSStorageConfig gcsStorageConfig2 = GCSStorageConfig
+              .builder()
+              .bucketPath(gcsBucketPath)
+              .serviceAccountKeyJsonFilePath("")
+              .build();
+      when(serverProperties.getGcsConfigurations())
+          .thenReturn(Map.of(gcsBucketPath, gcsStorageConfig2));
       credentialsOperations = new CredentialOperations();
       assertThatThrownBy(
               () ->

@@ -25,6 +25,12 @@ public class MetastoreDAO {
   @Column(name = "id")
   private UUID id;
 
+  @Column(name = "storage_root_credential_id")
+  private UUID storageRootCredentialId;
+
+  @Column(name = "storage_root_url")
+  private String storageRootUrl;
+
   public GetMetastoreSummaryResponse toGetMetastoreSummaryResponse() {
     return new GetMetastoreSummaryResponse().metastoreId(getId().toString());
   }

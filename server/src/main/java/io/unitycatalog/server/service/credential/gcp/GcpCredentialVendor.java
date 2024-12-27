@@ -28,7 +28,7 @@ public class GcpCredentialVendor {
   public static final List<String> INITIAL_SCOPES =
       List.of("https://www.googleapis.com/auth/cloud-platform");
 
-  private final Map<String, String> gcsConfigurations;
+  private final Map<String, GCSStorageConfig> gcsConfigurations;
 
   public GcpCredentialVendor() {
     this.gcsConfigurations = ServerProperties.getInstance().getGcsConfigurations();
@@ -37,7 +37,7 @@ public class GcpCredentialVendor {
   @SneakyThrows
   public AccessToken vendGcpToken(CredentialContext credentialContext) {
     String serviceAccountKeyJsonFilePath =
-        gcsConfigurations.get(credentialContext.getStorageBase());
+        gcsConfigurations.get(credentialContext.getStorageBase()).getServiceAccountKeyJsonFilePath();
 
     GoogleCredentials creds;
     if (serviceAccountKeyJsonFilePath != null && !serviceAccountKeyJsonFilePath.isEmpty()) {
