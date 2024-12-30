@@ -37,7 +37,9 @@ public class GcpCredentialVendor {
   @SneakyThrows
   public AccessToken vendGcpToken(CredentialContext credentialContext) {
     String serviceAccountKeyJsonFilePath =
-        gcsConfigurations.get(credentialContext.getStorageBase()).getServiceAccountKeyJsonFilePath();
+        gcsConfigurations
+            .get(credentialContext.getStorageBase())
+            .getServiceAccountKeyJsonFilePath();
 
     GoogleCredentials creds;
     if (serviceAccountKeyJsonFilePath != null && !serviceAccountKeyJsonFilePath.isEmpty()) {

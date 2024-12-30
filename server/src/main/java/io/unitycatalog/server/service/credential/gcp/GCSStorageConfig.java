@@ -6,6 +6,6 @@ import lombok.Getter;
 @Getter
 @Builder
 public class GCSStorageConfig {
-    private String bucketPath;
-    private String serviceAccountKeyJsonFilePath;
+  private String bucketPath;
+  private String serviceAccountKeyJsonFilePath;
 }

@@ -14,6 +14,6 @@ public class ADLSStorageConfig {
   private boolean testMode;
 
   public String getBasePath() {
-      return String.format("abfs://%s@%s.dfs.core.windows.net", containerName, storageAccountName);
+    return String.format("abfs://%s@%s.dfs.core.windows.net", containerName, storageAccountName);
   }
 }

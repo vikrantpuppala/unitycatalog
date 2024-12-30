@@ -6,11 +6,9 @@ import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.persist.dao.MetastoreDAO;
 import io.unitycatalog.server.persist.utils.FileUtils;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
-
+import io.unitycatalog.server.utils.ServerProperties;
 import java.util.Objects;
 import java.util.UUID;
-
-import io.unitycatalog.server.utils.ServerProperties;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -78,37 +76,54 @@ public class MetastoreRepository {
     }
   }
 
-  private void createOrUpdateMetastoreProperties(ServerProperties serverProperties, MetastoreDAO metastoreDAO) {
+  private void createOrUpdateMetastoreProperties(
+      ServerProperties serverProperties, MetastoreDAO metastoreDAO) {
     int cloudStoragesDefined =
         (serverProperties.getMetastoreS3Config().isPresent() ? 1 : 0)
             + (serverProperties.getMetastoreAdlsConfig().isPresent() ? 1 : 0)
             + (serverProperties.getMetastoreGcsConfig().isPresent() ? 1 : 0);
     if (cloudStoragesDefined > 1) {
-        throw new BaseException(
-            ErrorCode.INVALID_ARGUMENT,
-            "Only one cloud storage configuration is allowed for the metastore.");
+      throw new BaseException(
+          ErrorCode.INVALID_ARGUMENT,
+          "Only one cloud storage configuration is allowed for the metastore.");
     }
     // TODO: this credential needs to be able to self-assume role
-    //  or we could simply define two credentials: one to assume other roles and one for managed storage
+    //  or we could simply define two credentials: one to assume other roles and one for managed
+    // storage
     CreateStorageCredential createStorageCredential = new CreateStorageCredential();
     if (serverProperties.getMetastoreS3Config().isPresent()
-            && !Objects.equals(metastoreDAO.getStorageRootUrl(), serverProperties.getMetastoreS3Config().get().getBucketPath())) {
-      metastoreDAO.setStorageRootUrl(FileUtils.convertRelativePathToURI(serverProperties.getMetastoreS3Config().get().getBucketPath()));
-      AwsIamRoleRequest awsIamRoleRequest = new AwsIamRoleRequest().roleArn(serverProperties.getMetastoreS3Config().get().getAwsRoleArn());
+        && !Objects.equals(
+            metastoreDAO.getStorageRootUrl(),
+            serverProperties.getMetastoreS3Config().get().getBucketPath())) {
+      metastoreDAO.setStorageRootUrl(
+          FileUtils.convertRelativePathToURI(
+              serverProperties.getMetastoreS3Config().get().getBucketPath()));
+      AwsIamRoleRequest awsIamRoleRequest =
+          new AwsIamRoleRequest()
+              .roleArn(serverProperties.getMetastoreS3Config().get().getAwsRoleArn());
       createStorageCredential.awsIamRole(awsIamRoleRequest);
     }
     if (serverProperties.getMetastoreAdlsConfig().isPresent()
-            && !Objects.equals(metastoreDAO.getStorageRootUrl(), serverProperties.getMetastoreAdlsConfig().get().getStorageAccountName())) {
-      metastoreDAO.setStorageRootUrl(FileUtils.convertRelativePathToURI(serverProperties.getMetastoreAdlsConfig().get().getBasePath()));
-      AzureServicePrincipal azureServicePrincipal = new AzureServicePrincipal()
+        && !Objects.equals(
+            metastoreDAO.getStorageRootUrl(),
+            serverProperties.getMetastoreAdlsConfig().get().getStorageAccountName())) {
+      metastoreDAO.setStorageRootUrl(
+          FileUtils.convertRelativePathToURI(
+              serverProperties.getMetastoreAdlsConfig().get().getBasePath()));
+      AzureServicePrincipal azureServicePrincipal =
+          new AzureServicePrincipal()
               .directoryId(serverProperties.getMetastoreAdlsConfig().get().getTenantId())
               .applicationId(serverProperties.getMetastoreAdlsConfig().get().getClientId())
               .clientSecret(serverProperties.getMetastoreAdlsConfig().get().getClientSecret());
       createStorageCredential.azureServicePrincipal(azureServicePrincipal);
     }
     if (serverProperties.getMetastoreGcsConfig().isPresent()
-            && !Objects.equals(metastoreDAO.getStorageRootUrl(), serverProperties.getMetastoreGcsConfig().get().getBucketPath())) {
-      metastoreDAO.setStorageRootUrl(FileUtils.convertRelativePathToURI(serverProperties.getMetastoreGcsConfig().get().getBucketPath()));
+        && !Objects.equals(
+            metastoreDAO.getStorageRootUrl(),
+            serverProperties.getMetastoreGcsConfig().get().getBucketPath())) {
+      metastoreDAO.setStorageRootUrl(
+          FileUtils.convertRelativePathToURI(
+              serverProperties.getMetastoreGcsConfig().get().getBucketPath()));
       // TODO: gcp creds
     }
     STORAGE_CREDENTIAL_REPOSITORY.addStorageCredential(createStorageCredential);

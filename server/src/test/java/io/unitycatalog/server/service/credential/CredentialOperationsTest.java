@@ -120,8 +120,8 @@ public class CredentialOperationsTest {
       String gcsBucketPath = "gs://uctest";
       mockedStatic.when(ServerProperties::getInstance).thenReturn(serverProperties);
       // Test mode used
-      GCSStorageConfig gcsStorageConfig = GCSStorageConfig
-              .builder()
+      GCSStorageConfig gcsStorageConfig =
+          GCSStorageConfig.builder()
               .bucketPath(gcsBucketPath)
               .serviceAccountKeyJsonFilePath("")
               .build();
@@ -134,8 +134,8 @@ public class CredentialOperationsTest {
       assertThat(gcpTemporaryCredentials.getGcpOauthToken().getOauthToken()).isNotNull();
 
       // Use default creds
-      GCSStorageConfig gcsStorageConfig2 = GCSStorageConfig
-              .builder()
+      GCSStorageConfig gcsStorageConfig2 =
+          GCSStorageConfig.builder()
               .bucketPath(gcsBucketPath)
               .serviceAccountKeyJsonFilePath("")
               .build();

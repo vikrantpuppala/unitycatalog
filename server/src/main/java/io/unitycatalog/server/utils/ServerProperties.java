@@ -2,17 +2,14 @@ package io.unitycatalog.server.utils;
 
 import io.unitycatalog.server.service.credential.aws.S3StorageConfig;
 import io.unitycatalog.server.service.credential.azure.ADLSStorageConfig;
+import io.unitycatalog.server.service.credential.gcp.GCSStorageConfig;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-
-import io.unitycatalog.server.service.credential.gcp.GCSStorageConfig;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,14 +54,15 @@ public class ServerProperties {
       return Optional.empty();
     }
 
-    return Optional.of(S3StorageConfig.builder()
-        .bucketPath(bucketPath)
-        .region(region)
-        .awsRoleArn(awsRoleArn)
-        .accessKey(accessKey)
-        .secretKey(secretKey)
-        .sessionToken(sessionToken)
-        .build());
+    return Optional.of(
+        S3StorageConfig.builder()
+            .bucketPath(bucketPath)
+            .region(region)
+            .awsRoleArn(awsRoleArn)
+            .accessKey(accessKey)
+            .secretKey(secretKey)
+            .sessionToken(sessionToken)
+            .build());
   }
 
   public Optional<ADLSStorageConfig> getMetastoreAdlsConfig() {
@@ -75,18 +73,22 @@ public class ServerProperties {
     String clientSecret = properties.getProperty("metastore.adls.clientSecret");
     String testMode = properties.getProperty("metastore.adls.testMode");
 
-    if (storageAccountName == null || tenantId == null || clientId == null || clientSecret == null) {
+    if (storageAccountName == null
+        || tenantId == null
+        || clientId == null
+        || clientSecret == null) {
       return Optional.empty();
     }
 
-    return Optional.of(ADLSStorageConfig.builder()
-        .storageAccountName(storageAccountName)
-        .containerName(containerName)
-        .tenantId(tenantId)
-        .clientId(clientId)
-        .clientSecret(clientSecret)
-        .testMode(testMode != null && testMode.equalsIgnoreCase("true"))
-        .build());
+    return Optional.of(
+        ADLSStorageConfig.builder()
+            .storageAccountName(storageAccountName)
+            .containerName(containerName)
+            .tenantId(tenantId)
+            .clientId(clientId)
+            .clientSecret(clientSecret)
+            .testMode(testMode != null && testMode.equalsIgnoreCase("true"))
+            .build());
   }
 
   public Optional<GCSStorageConfig> getMetastoreGcsConfig() {
@@ -97,93 +99,11 @@ public class ServerProperties {
       return Optional.empty();
     }
 
-    return Optional.of(GCSStorageConfig.builder()
-        .bucketPath(bucketPath)
-        .serviceAccountKeyJsonFilePath(jsonKeyFilePath)
-        .build());
-  }
-
-
-  public Map<String, S3StorageConfig> getS3Configurations() {
-    Map<String, S3StorageConfig> s3BucketConfigMap = new HashMap<>();
-    int i = 0;
-    while (true) {
-      String bucketPath = properties.getProperty("s3.bucketPath." + i);
-      String region = properties.getProperty("s3.region." + i);
-      String awsRoleArn = properties.getProperty("s3.awsRoleArn." + i);
-      String accessKey = properties.getProperty("s3.accessKey." + i);
-      String secretKey = properties.getProperty("s3.secretKey." + i);
-      String sessionToken = properties.getProperty("s3.sessionToken." + i);
-      if ((bucketPath == null || region == null || awsRoleArn == null)
-          && (accessKey == null || secretKey == null || sessionToken == null)) {
-        break;
-      }
-      S3StorageConfig s3StorageConfig =
-          S3StorageConfig.builder()
-              .bucketPath(bucketPath)
-              .region(region)
-              .awsRoleArn(awsRoleArn)
-              .accessKey(accessKey)
-              .secretKey(secretKey)
-              .sessionToken(sessionToken)
-              .build();
-      s3BucketConfigMap.put(bucketPath, s3StorageConfig);
-      i++;
-    }
-
-    return s3BucketConfigMap;
-  }
-
-  public Map<String, GCSStorageConfig> getGcsConfigurations() {
-    Map<String, GCSStorageConfig> gcsConfigMap = new HashMap<>();
-    int i = 0;
-    while (true) {
-      String bucketPath = properties.getProperty("gcs.bucketPath." + i);
-      String jsonKeyFilePath = properties.getProperty("gcs.jsonKeyFilePath." + i);
-      if (bucketPath == null || jsonKeyFilePath == null) {
-        break;
-      }
-      GCSStorageConfig gcsStorageConfig =
-          GCSStorageConfig.builder()
-              .bucketPath(bucketPath)
-              .serviceAccountKeyJsonFilePath(jsonKeyFilePath)
-              .build();
-      gcsConfigMap.put(bucketPath, gcsStorageConfig);
-      i++;
-    }
-
-    return gcsConfigMap;
-  }
-
-  public Map<String, ADLSStorageConfig> getAdlsConfigurations() {
-    Map<String, ADLSStorageConfig> adlsConfigMap = new HashMap<>();
-
-    int i = 0;
-    while (true) {
-      String storageAccountName = properties.getProperty("adls.storageAccountName." + i);
-      String tenantId = properties.getProperty("adls.tenantId." + i);
-      String clientId = properties.getProperty("adls.clientId." + i);
-      String clientSecret = properties.getProperty("adls.clientSecret." + i);
-      String testMode = properties.getProperty("adls.testMode." + i);
-      if (storageAccountName == null
-          || tenantId == null
-          || clientId == null
-          || clientSecret == null) {
-        break;
-      }
-      adlsConfigMap.put(
-          storageAccountName,
-          ADLSStorageConfig.builder()
-              .storageAccountName(storageAccountName)
-              .tenantId(tenantId)
-              .clientId(clientId)
-              .clientSecret(clientSecret)
-              .testMode(testMode != null && testMode.equalsIgnoreCase("true"))
-              .build());
-      i++;
-    }
-
-    return adlsConfigMap;
+    return Optional.of(
+        GCSStorageConfig.builder()
+            .bucketPath(bucketPath)
+            .serviceAccountKeyJsonFilePath(jsonKeyFilePath)
+            .build());
   }
 
   /**
