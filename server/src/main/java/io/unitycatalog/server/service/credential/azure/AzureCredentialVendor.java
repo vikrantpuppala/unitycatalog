@@ -13,54 +13,56 @@ import com.azure.storage.file.datalake.implementation.util.DataLakeSasImplUtil;
 import com.azure.storage.file.datalake.models.UserDelegationKey;
 import com.azure.storage.file.datalake.sas.DataLakeServiceSasSignatureValues;
 import com.azure.storage.file.datalake.sas.PathSasPermission;
+import io.unitycatalog.server.model.AzureServicePrincipal;
+import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
-import io.unitycatalog.server.utils.ServerProperties;
 import java.net.URI;
 import java.time.OffsetDateTime;
-import java.util.Map;
 import java.util.Set;
 
 public class AzureCredentialVendor {
 
-  private final Map<String, ADLSStorageConfig> adlsConfigurations;
+  private final ADLSStorageConfig metastoreAdlsConfig;
+  private final TokenCredential tokenCredential;
+  private static final ExternalLocationRepository EXTERNAL_LOCATION_REPOSITORY =
+      ExternalLocationRepository.getInstance();
 
-  public AzureCredentialVendor() {
-    this.adlsConfigurations = ServerProperties.getInstance().getAdlsConfigurations();
+  public AzureCredentialVendor(ADLSStorageConfig metastoreAdlsConfig) {
+    this.metastoreAdlsConfig = metastoreAdlsConfig;
+    this.tokenCredential = getTokenCredential(metastoreAdlsConfig);
   }
 
   public AzureCredential vendAzureCredential(CredentialContext context) {
     ADLSLocationUtils.ADLSLocationParts locationParts =
         ADLSLocationUtils.parseLocation(context.getStorageBase());
-    ADLSStorageConfig config = adlsConfigurations.get(locationParts.accountName());
 
-    TokenCredential tokenCredential;
-    if (config == null) {
-      // fallback to creating credential from environment variables (or somewhere on the default
-      // chain)
-      tokenCredential = new DefaultAzureCredentialBuilder().build();
-    } else {
-      if (config.isTestMode()) {
-        // allow pass-through of a dummy value for integration testing
-        return AzureCredential.builder()
-            .sasToken(
-                format(
-                    "%s/%s/%s",
-                    config.getTenantId(), config.getClientId(), config.getClientSecret()))
-            .expirationTimeInEpochMillis(253370790000000L)
-            .build();
-      }
-      tokenCredential =
-          new ClientSecretCredentialBuilder()
-              .tenantId(config.getTenantId())
-              .clientId(config.getClientId())
-              .clientSecret(config.getClientSecret())
-              .build();
+    if (metastoreAdlsConfig.isTestMode()) {
+      // allow pass-through of a dummy value for integration testing
+      return AzureCredential.builder()
+          .sasToken(
+              format(
+                  "%s/%s/%s",
+                  metastoreAdlsConfig.getTenantId(),
+                  metastoreAdlsConfig.getClientId(),
+                  metastoreAdlsConfig.getClientSecret()))
+          .expirationTimeInEpochMillis(253370790000000L)
+          .build();
     }
+    AzureServicePrincipal azureServicePrincipal =
+        EXTERNAL_LOCATION_REPOSITORY
+            .getStorageCredentialsForPath(context)
+            .getAzureServicePrincipal();
+    ADLSStorageConfig adlsStorageConfig =
+        ADLSStorageConfig.builder()
+            .tenantId(azureServicePrincipal.getDirectoryId())
+            .clientId(azureServicePrincipal.getApplicationId())
+            .clientSecret(azureServicePrincipal.getClientSecret())
+            .build();
     DataLakeServiceAsyncClient serviceClient =
         new DataLakeServiceClientBuilder()
             .httpClient(HttpClient.createDefault())
             .endpoint("https://" + locationParts.account())
-            .credential(tokenCredential)
+            .credential(getTokenCredential(adlsStorageConfig))
             .buildAsyncClient();
 
     // TODO: possibly make this configurable - defaulted to 1 hour right now
@@ -90,7 +92,20 @@ public class AzureCredentialVendor {
         .build();
   }
 
-  private PathSasPermission resolvePrivileges(Set<CredentialContext.Privilege> privileges) {
+  private static TokenCredential getTokenCredential(ADLSStorageConfig adlsStorageConfig) {
+    if (adlsStorageConfig == null) {
+      // fallback to creating credential from environment variables (or somewhere on the default
+      // chain)
+      return new DefaultAzureCredentialBuilder().build();
+    }
+    return new ClientSecretCredentialBuilder()
+        .tenantId(adlsStorageConfig.getTenantId())
+        .clientId(adlsStorageConfig.getClientId())
+        .clientSecret(adlsStorageConfig.getClientSecret())
+        .build();
+  }
+
+  private static PathSasPermission resolvePrivileges(Set<CredentialContext.Privilege> privileges) {
     PathSasPermission result = new PathSasPermission();
     if (privileges.contains(CredentialContext.Privilege.UPDATE)) {
       result.setWritePermission(true);

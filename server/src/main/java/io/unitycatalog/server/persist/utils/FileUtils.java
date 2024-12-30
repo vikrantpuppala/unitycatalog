@@ -19,7 +19,9 @@ import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -205,5 +207,24 @@ public class FileUtils {
     if (!normalized.getPath().startsWith(uri.getPath())) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Normalization failed: " + uri.getPath());
     }
+  }
+
+  public static List<String> getParentPathsList(String url) {
+    List<String> parentPaths = new ArrayList<>();
+    Path path = Paths.get(url);
+
+    while (path != null) {
+      path = path.getParent();
+      if (path != null) {
+        try {
+          String normalizedPath = path.toString().replaceAll("/$", ""); // Strip trailing slash
+          parentPaths.add(normalizedPath);
+        } catch (Exception e) {
+          // Ignore invalid paths
+        }
+      }
+    }
+
+    return parentPaths;
   }
 }

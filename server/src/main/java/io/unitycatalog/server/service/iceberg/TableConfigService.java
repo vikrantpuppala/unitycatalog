@@ -27,10 +27,8 @@ import static io.unitycatalog.server.utils.Constants.URI_SCHEME_S3;
 public class TableConfigService {
 
   private final CredentialOperations credentialOperations;
-  private final Map<String, S3StorageConfig> s3Configurations;
 
   public TableConfigService(CredentialOperations credentialOperations) {
-    this.s3Configurations = ServerProperties.getInstance().getS3Configurations();
     this.credentialOperations = credentialOperations;
   }
 
@@ -66,12 +64,11 @@ public class TableConfigService {
   }
 
   private Map<String, String> getS3Config(CredentialContext context) {
-    S3StorageConfig s3StorageConfig = s3Configurations.get(context.getStorageBase());
     Credentials awsCredential = credentialOperations.vendAwsCredential(context);
 
     return Map.of(S3FileIOProperties.ACCESS_KEY_ID, awsCredential.accessKeyId(),
       S3FileIOProperties.SECRET_ACCESS_KEY, awsCredential.secretAccessKey(),
       S3FileIOProperties.SESSION_TOKEN, awsCredential.sessionToken(),
-      AwsClientProperties.CLIENT_REGION, s3StorageConfig.getRegion());
+      AwsClientProperties.CLIENT_REGION, ""); //FIXME!! Add region
   }
 }

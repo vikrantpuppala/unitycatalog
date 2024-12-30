@@ -4,30 +4,37 @@ import com.google.auth.oauth2.AccessToken;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
+import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.aws.AwsCredentialVendor;
 import io.unitycatalog.server.service.credential.azure.AzureCredential;
 import io.unitycatalog.server.service.credential.azure.AzureCredentialVendor;
 import io.unitycatalog.server.service.credential.gcp.GcpCredentialVendor;
+import io.unitycatalog.server.utils.ServerProperties;
 import software.amazon.awssdk.services.sts.model.Credentials;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
-import static io.unitycatalog.server.utils.Constants.URI_SCHEME_ABFS;
-import static io.unitycatalog.server.utils.Constants.URI_SCHEME_ABFSS;
-import static io.unitycatalog.server.utils.Constants.URI_SCHEME_GS;
-import static io.unitycatalog.server.utils.Constants.URI_SCHEME_S3;
+import static io.unitycatalog.server.utils.Constants.*;
 
 public class CredentialOperations {
 
-  private final AwsCredentialVendor awsCredentialVendor;
-  private final AzureCredentialVendor azureCredentialVendor;
-  private final GcpCredentialVendor gcpCredentialVendor;
+  private AwsCredentialVendor awsCredentialVendor = null;
+  private AzureCredentialVendor azureCredentialVendor = null;
+  private GcpCredentialVendor gcpCredentialVendor = null;
 
-  public CredentialOperations() {
-    this.awsCredentialVendor = new AwsCredentialVendor();
-    this.azureCredentialVendor = new AzureCredentialVendor();
-    this.gcpCredentialVendor = new GcpCredentialVendor();
+  public CredentialOperations(ServerProperties serverProperties) {
+    if (serverProperties.getMetastoreS3Config().isPresent()) {
+      this.awsCredentialVendor = new AwsCredentialVendor(serverProperties.getMetastoreS3Config().get());
+    }
+    if (serverProperties.getMetastoreAdlsConfig().isPresent()) {
+      this.azureCredentialVendor = new AzureCredentialVendor(serverProperties.getMetastoreAdlsConfig().get());
+    }
+    if (serverProperties.getMetastoreGcsConfig().isPresent()) {
+      this.gcpCredentialVendor = new GcpCredentialVendor(serverProperties.getMetastoreGcsConfig().get());
+    }
   }
 
   public TemporaryCredentials vendCredential(String path, Set<CredentialContext.Privilege> privileges) {
@@ -42,7 +49,6 @@ public class CredentialOperations {
 
   public TemporaryCredentials vendCredential(CredentialContext context) {
     TemporaryCredentials temporaryCredentials = new TemporaryCredentials();
-
     switch (context.getStorageScheme()) {
       case URI_SCHEME_ABFS, URI_SCHEME_ABFSS -> {
         AzureCredential azureCredential = vendAzureCredential(context);
@@ -67,14 +73,23 @@ public class CredentialOperations {
   }
 
   public Credentials vendAwsCredential(CredentialContext context) {
+    if (awsCredentialVendor == null) {
+      throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Metastore S3 configuration not provided.");
+    }
     return awsCredentialVendor.vendAwsCredentials(context);
   }
 
   public AzureCredential vendAzureCredential(CredentialContext context) {
+    if (azureCredentialVendor == null) {
+      throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Metastore ADLS configuration not provided.");
+    }
     return azureCredentialVendor.vendAzureCredential(context);
   }
 
   public AccessToken vendGcpToken(CredentialContext context) {
+    if (gcpCredentialVendor == null) {
+      throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Metastore GCS configuration not provided.");
+    }
     return gcpCredentialVendor.vendGcpToken(context);
   }
 }

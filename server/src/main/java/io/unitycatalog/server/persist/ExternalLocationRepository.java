@@ -2,14 +2,13 @@ package io.unitycatalog.server.persist;
 
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
-import io.unitycatalog.server.model.CreateExternalLocation;
-import io.unitycatalog.server.model.ExternalLocationInfo;
-import io.unitycatalog.server.model.ListExternalLocationsResponse;
-import io.unitycatalog.server.model.UpdateExternalLocation;
+import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.persist.dao.ExternalLocationDAO;
 import io.unitycatalog.server.persist.dao.StorageCredentialDAO;
+import io.unitycatalog.server.persist.utils.FileUtils;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
@@ -192,6 +191,35 @@ public class ExternalLocationRepository {
         session.remove(existingLocation);
         tx.commit();
         return existingLocation;
+      } catch (Exception e) {
+        tx.rollback();
+        throw e;
+      }
+    }
+  }
+
+  public StorageCredentialInfo getStorageCredentialsForPath(CredentialContext context) {
+    try (Session session = SESSION_FACTORY.openSession()) {
+      session.setDefaultReadOnly(true);
+      Transaction tx = session.beginTransaction();
+      try {
+        List<ExternalLocationInfo> externalLocations =
+            listExternalLocations(Optional.empty(), Optional.empty()).getExternalLocations()
+                .stream()
+                .filter(el -> el.getUrl().startsWith(context.getStorageScheme()))
+                .toList();
+        List<String> parentPaths = FileUtils.getParentPathsList(context.getStorageBase());
+        Optional<ExternalLocationInfo> externalLocationToUse =
+            externalLocations.stream().filter(el -> parentPaths.contains(el.getUrl())).findFirst();
+        if (externalLocationToUse.isEmpty()) {
+          throw new BaseException(
+              ErrorCode.FAILED_PRECONDITION, "No external location found for the given path.");
+        }
+        StorageCredentialDAO storageCredentialDAO =
+            STORAGE_CREDENTIAL_REPOSITORY.getStorageCredentialDAO(
+                session, externalLocationToUse.get().getCredentialId());
+        tx.commit();
+        return storageCredentialDAO.toStorageCredentialInfo();
       } catch (Exception e) {
         tx.rollback();
         throw e;

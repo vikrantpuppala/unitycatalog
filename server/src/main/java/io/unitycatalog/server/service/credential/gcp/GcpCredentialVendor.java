@@ -12,60 +12,64 @@ import com.google.common.base.CharMatcher;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.service.credential.CredentialContext;
-import io.unitycatalog.server.utils.ServerProperties;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.Date;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.SneakyThrows;
 import org.apache.iceberg.Files;
 
 public class GcpCredentialVendor {
-
+  private final GCSStorageConfig metastoreGcsConfig;
+  private final GoogleCredentials metastoreGoogleCredentials;
   public static final List<String> INITIAL_SCOPES =
       List.of("https://www.googleapis.com/auth/cloud-platform");
 
-  private final Map<String, GCSStorageConfig> gcsConfigurations;
-
-  public GcpCredentialVendor() {
-    this.gcsConfigurations = ServerProperties.getInstance().getGcsConfigurations();
+  public GcpCredentialVendor(GCSStorageConfig metastoreGcsConfig) {
+    this.metastoreGcsConfig = metastoreGcsConfig;
+    this.metastoreGoogleCredentials = getGoogleCredentials(metastoreGcsConfig);
   }
 
   @SneakyThrows
   public AccessToken vendGcpToken(CredentialContext credentialContext) {
-    String serviceAccountKeyJsonFilePath =
-        gcsConfigurations
-            .get(credentialContext.getStorageBase())
-            .getServiceAccountKeyJsonFilePath();
+    String serviceAccountKeyJsonFilePath = metastoreGcsConfig.getServiceAccountKeyJsonFilePath();
 
-    GoogleCredentials creds;
+    if (serviceAccountKeyJsonFilePath != null
+        && serviceAccountKeyJsonFilePath.startsWith("testing://")) {
+      // allow pass-through of a dummy value for integration testing
+      return AccessToken.newBuilder()
+          .setTokenValue(serviceAccountKeyJsonFilePath)
+          .setExpirationTime(Date.from(Instant.ofEpochMilli(253370790000000L)))
+          .build();
+    }
+
+    // TODO: This is not correct. We need to downscope the token based on the context not the
+    // metastore google credentials
+    return downscopeGcpCreds(
+            metastoreGoogleCredentials.createScoped(INITIAL_SCOPES), credentialContext)
+        .refreshAccessToken();
+  }
+
+  @SneakyThrows
+  private static GoogleCredentials getGoogleCredentials(GCSStorageConfig metastoreGcsConfig) {
+    String serviceAccountKeyJsonFilePath = metastoreGcsConfig.getServiceAccountKeyJsonFilePath();
+
     if (serviceAccountKeyJsonFilePath != null && !serviceAccountKeyJsonFilePath.isEmpty()) {
-      if (serviceAccountKeyJsonFilePath.startsWith("testing://")) {
-        // allow pass-through of a dummy value for integration testing
-        return AccessToken.newBuilder()
-            .setTokenValue(serviceAccountKeyJsonFilePath)
-            .setExpirationTime(Date.from(Instant.ofEpochMilli(253370790000000L)))
-            .build();
-      }
-      creds =
-          ServiceAccountCredentials.fromStream(
-              Files.localInput(serviceAccountKeyJsonFilePath).newStream());
+      return ServiceAccountCredentials.fromStream(
+          Files.localInput(serviceAccountKeyJsonFilePath).newStream());
     } else {
       try {
-        creds = GoogleCredentials.getApplicationDefault();
+        return GoogleCredentials.getApplicationDefault();
       } catch (IOException e) {
         throw new BaseException(ErrorCode.FAILED_PRECONDITION, "GCS credentials not found.", e);
       }
     }
-
-    return downscopeGcpCreds(creds.createScoped(INITIAL_SCOPES), credentialContext)
-        .refreshAccessToken();
   }
 
-  OAuth2Credentials downscopeGcpCreds(GoogleCredentials credentials, CredentialContext context) {
+  private static OAuth2Credentials downscopeGcpCreds(
+      GoogleCredentials credentials, CredentialContext context) {
     CredentialAccessBoundary.Builder boundaryBuilder = CredentialAccessBoundary.newBuilder();
     List<String> roles = resolvePrivilegesToRoles(context.getPrivileges());
 
@@ -112,7 +116,8 @@ public class GcpCredentialVendor {
         .build();
   }
 
-  List<String> resolvePrivilegesToRoles(Set<CredentialContext.Privilege> privileges) {
+  private static List<String> resolvePrivilegesToRoles(
+      Set<CredentialContext.Privilege> privileges) {
     if (privileges.contains(CredentialContext.Privilege.UPDATE)) {
       return List.of("inRole:roles/storage.objectAdmin");
     } else if (privileges.contains(CredentialContext.Privilege.SELECT)) {

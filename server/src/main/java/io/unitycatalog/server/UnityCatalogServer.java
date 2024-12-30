@@ -88,11 +88,11 @@ public class UnityCatalogServer {
     JacksonResponseConverterFunction scimResponseFunction =
         new JacksonResponseConverterFunction(responseMapper);
 
-    // Credentials Service
-    CredentialOperations credentialOperations = new CredentialOperations();
-
     ServerProperties serverProperties = ServerProperties.getInstance();
     boolean authorizationEnabled = serverProperties.isAuthorizationEnabled();
+
+    // Credentials Service
+    CredentialOperations credentialOperations = new CredentialOperations(serverProperties);
 
     // Create a Metastore if one does not exist.
     MetastoreRepository.getInstance().initMetastoreIfNeeded(serverProperties);
