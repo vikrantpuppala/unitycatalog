@@ -1,11 +1,10 @@
 package io.unitycatalog.server.service.credential.aws;
 
-import io.unitycatalog.server.exception.BaseException;
-import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.StorageCredentialInfo;
 import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -17,25 +16,26 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 
 public class AwsCredentialVendor {
   private final S3StorageConfig metastoreS3StorageConfiguration;
-  private final StsClient metastoreStsClient;
+  private StsClient metastoreStsClient;
   private static final ExternalLocationRepository EXTERNAL_LOCATION_REPOSITORY =
       ExternalLocationRepository.getInstance();
 
   public AwsCredentialVendor(S3StorageConfig metastoreS3StorageConfiguration) {
     this.metastoreS3StorageConfiguration = metastoreS3StorageConfiguration;
-    this.metastoreStsClient = getStsClientForStorageConfig(metastoreS3StorageConfiguration);
   }
 
-  public Credentials vendAwsCredentials(CredentialContext context) {
-    if (metastoreS3StorageConfiguration == null) {
-      throw new BaseException(ErrorCode.FAILED_PRECONDITION, "S3 bucket configuration not found.");
+  public Credentials vendAwsCredentials(
+      CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
+    if (this.metastoreStsClient == null) {
+      this.metastoreStsClient = getStsClientForStorageConfig(metastoreS3StorageConfiguration);
     }
     // TODO: Update this with relevant user/role type info once available
     String roleSessionName = "uc-%s".formatted(UUID.randomUUID());
     String awsPolicy =
         AwsPolicyGenerator.generatePolicy(context.getPrivileges(), context.getLocations());
     StorageCredentialInfo storageCredentialInfo =
-        EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context);
+        optionalStorageCredential.orElse(
+            EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context));
     return metastoreStsClient
         .assumeRole(
             r ->

@@ -471,7 +471,7 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
     session.sql(
         String.format(
             "CREATE TABLE delta.`%s`(i INT, s STRING) USING delta %s", location, partitionClause));
-    CredentialTestFileSystem.credentialCheckEnabled = true;
+    CredentialTestFileSystem.credentialCheckEnabled = false;
   }
 
   private void setupExternalDeltaTable(

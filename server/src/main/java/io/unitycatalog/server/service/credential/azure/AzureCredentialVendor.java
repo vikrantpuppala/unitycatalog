@@ -1,7 +1,5 @@
 package io.unitycatalog.server.service.credential.azure;
 
-import static java.lang.String.format;
-
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.http.HttpClient;
 import com.azure.core.util.Context;
@@ -14,43 +12,27 @@ import com.azure.storage.file.datalake.models.UserDelegationKey;
 import com.azure.storage.file.datalake.sas.DataLakeServiceSasSignatureValues;
 import com.azure.storage.file.datalake.sas.PathSasPermission;
 import io.unitycatalog.server.model.AzureServicePrincipal;
+import io.unitycatalog.server.model.StorageCredentialInfo;
 import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.Set;
 
 public class AzureCredentialVendor {
-
-  private final ADLSStorageConfig metastoreAdlsConfig;
-  private final TokenCredential tokenCredential;
   private static final ExternalLocationRepository EXTERNAL_LOCATION_REPOSITORY =
       ExternalLocationRepository.getInstance();
 
-  public AzureCredentialVendor(ADLSStorageConfig metastoreAdlsConfig) {
-    this.metastoreAdlsConfig = metastoreAdlsConfig;
-    this.tokenCredential = getTokenCredential(metastoreAdlsConfig);
-  }
+  public AzureCredentialVendor() {}
 
-  public AzureCredential vendAzureCredential(CredentialContext context) {
+  public AzureCredential vendAzureCredential(
+      CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
     ADLSLocationUtils.ADLSLocationParts locationParts =
         ADLSLocationUtils.parseLocation(context.getStorageBase());
-
-    if (metastoreAdlsConfig.isTestMode()) {
-      // allow pass-through of a dummy value for integration testing
-      return AzureCredential.builder()
-          .sasToken(
-              format(
-                  "%s/%s/%s",
-                  metastoreAdlsConfig.getTenantId(),
-                  metastoreAdlsConfig.getClientId(),
-                  metastoreAdlsConfig.getClientSecret()))
-          .expirationTimeInEpochMillis(253370790000000L)
-          .build();
-    }
     AzureServicePrincipal azureServicePrincipal =
-        EXTERNAL_LOCATION_REPOSITORY
-            .getStorageCredentialsForPath(context)
+        optionalStorageCredential
+            .orElse(EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context))
             .getAzureServicePrincipal();
     ADLSStorageConfig adlsStorageConfig =
         ADLSStorageConfig.builder()

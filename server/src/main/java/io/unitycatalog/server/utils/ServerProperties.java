@@ -10,14 +10,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.Properties;
-import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ServerProperties {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerProperties.class);
-  @Getter private static final ServerProperties instance = new ServerProperties();
+  private static ServerProperties instance = null;
   private final Properties properties;
 
   public static final String SERVER_PROPERTIES_FILE = "etc/conf/server.properties";
@@ -25,6 +24,17 @@ public class ServerProperties {
   private ServerProperties() {
     properties = new Properties();
     loadProperties();
+  }
+
+  public ServerProperties(Properties properties) {
+    this.properties = properties;
+  }
+
+  public static ServerProperties getInstance() {
+    if (instance == null) {
+      instance = new ServerProperties();
+    }
+    return instance;
   }
 
   // Load properties from a configuration file
@@ -134,7 +144,7 @@ public class ServerProperties {
   }
 
   public boolean isAuthorizationEnabled() {
-    String authorization = instance.getProperty("server.authorization", "disable");
+    String authorization = getInstance().getProperty("server.authorization", "disable");
     return authorization.equalsIgnoreCase("enable");
   }
 }

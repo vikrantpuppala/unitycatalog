@@ -29,39 +29,35 @@ public class CredentialOperations {
     if (serverProperties.getMetastoreS3Config().isPresent()) {
       this.awsCredentialVendor = new AwsCredentialVendor(serverProperties.getMetastoreS3Config().get());
     }
-    if (serverProperties.getMetastoreAdlsConfig().isPresent()) {
-      this.azureCredentialVendor = new AzureCredentialVendor(serverProperties.getMetastoreAdlsConfig().get());
-    }
-    if (serverProperties.getMetastoreGcsConfig().isPresent()) {
-      this.gcpCredentialVendor = new GcpCredentialVendor(serverProperties.getMetastoreGcsConfig().get());
-    }
+    this.azureCredentialVendor = new AzureCredentialVendor();
+    this.gcpCredentialVendor = new GcpCredentialVendor();
   }
 
-  public TemporaryCredentials vendCredential(String path, Set<CredentialContext.Privilege> privileges) {
+  public TemporaryCredentials vendCredential(String path, Set<CredentialContext.Privilege> privileges, Optional<StorageCredentialInfo> optionalStorageCredential) {
     if (path == null || path.isEmpty()) {
       throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Storage location is null or empty.");
     }
     URI storageLocationUri = URI.create(path);
     // TODO: At some point, we need to check if user/subject has privileges they are asking for
     CredentialContext credentialContext = CredentialContext.create(storageLocationUri, privileges);
-    return vendCredential(credentialContext);
+    return vendCredential(credentialContext, optionalStorageCredential);
   }
 
-  public TemporaryCredentials vendCredential(CredentialContext context) {
+  public TemporaryCredentials vendCredential(CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
     TemporaryCredentials temporaryCredentials = new TemporaryCredentials();
     switch (context.getStorageScheme()) {
       case URI_SCHEME_ABFS, URI_SCHEME_ABFSS -> {
-        AzureCredential azureCredential = vendAzureCredential(context);
+        AzureCredential azureCredential = vendAzureCredential(context, optionalStorageCredential);
         temporaryCredentials.azureUserDelegationSas(new AzureUserDelegationSAS().sasToken(azureCredential.getSasToken()))
           .expirationTime(azureCredential.getExpirationTimeInEpochMillis());
       }
       case URI_SCHEME_GS -> {
-        AccessToken gcpToken = vendGcpToken(context);
+        AccessToken gcpToken = vendGcpToken(context, optionalStorageCredential);
         temporaryCredentials.gcpOauthToken(new GcpOauthToken().oauthToken(gcpToken.getTokenValue()))
           .expirationTime(gcpToken.getExpirationTime().getTime());
       }
       case URI_SCHEME_S3 -> {
-        Credentials awsSessionCredentials = vendAwsCredential(context);
+        Credentials awsSessionCredentials = vendAwsCredential(context, optionalStorageCredential);
         temporaryCredentials.awsTempCredentials(new AwsCredentials()
           .accessKeyId(awsSessionCredentials.accessKeyId())
           .secretAccessKey(awsSessionCredentials.secretAccessKey())
@@ -72,24 +68,18 @@ public class CredentialOperations {
     return temporaryCredentials;
   }
 
-  public Credentials vendAwsCredential(CredentialContext context) {
+  public Credentials vendAwsCredential(CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
     if (awsCredentialVendor == null) {
       throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Metastore S3 configuration not provided.");
     }
-    return awsCredentialVendor.vendAwsCredentials(context);
+    return awsCredentialVendor.vendAwsCredentials(context, optionalStorageCredential);
   }
 
-  public AzureCredential vendAzureCredential(CredentialContext context) {
-    if (azureCredentialVendor == null) {
-      throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Metastore ADLS configuration not provided.");
-    }
-    return azureCredentialVendor.vendAzureCredential(context);
+  public AzureCredential vendAzureCredential(CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
+    return azureCredentialVendor.vendAzureCredential(context, optionalStorageCredential);
   }
 
-  public AccessToken vendGcpToken(CredentialContext context) {
-    if (gcpCredentialVendor == null) {
-      throw new BaseException(ErrorCode.FAILED_PRECONDITION, "Metastore GCS configuration not provided.");
-    }
-    return gcpCredentialVendor.vendGcpToken(context);
+  public AccessToken vendGcpToken(CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
+    return gcpCredentialVendor.vendGcpToken(context, optionalStorageCredential);
   }
 }

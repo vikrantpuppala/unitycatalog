@@ -28,6 +28,8 @@ public class TableRepository {
   private static final Logger LOGGER = LoggerFactory.getLogger(TableRepository.class);
   private static final SessionFactory SESSION_FACTORY = HibernateUtils.getSessionFactory();
   private static final SchemaRepository SCHEMA_REPOSITORY = SchemaRepository.getInstance();
+  private static final StorageCredentialRepository STORAGE_CREDENTIAL_REPOSITORY =
+      StorageCredentialRepository.getInstance();
   private static final PagedListingHelper<TableInfoDAO> LISTING_HELPER =
       new PagedListingHelper<>(TableInfoDAO.class);
 
@@ -95,6 +97,12 @@ public class TableRepository {
         tableInfo.setSchemaName(schemaName);
         RepositoryUtils.attachProperties(
             tableInfo, tableInfo.getTableId(), Constants.TABLE, session);
+        if (tableInfoDAO.getStorageCredentialId() != null) {
+          StorageCredentialInfo storageCredentialInfo =
+              STORAGE_CREDENTIAL_REPOSITORY.getStorageCredential(
+                  tableInfoDAO.getStorageCredentialId().toString());
+          tableInfo.setStorageCredentialName(storageCredentialInfo.getName());
+        }
         tx.commit();
         return tableInfo;
       } catch (Exception e) {
@@ -136,6 +144,7 @@ public class TableRepository {
             .dataSourceFormat(createTable.getDataSourceFormat())
             .columns(columnInfos)
             .storageLocation(FileUtils.convertRelativePathToURI(createTable.getStorageLocation()))
+            .storageCredentialName(createTable.getStorageCredentialName())
             .comment(createTable.getComment())
             .properties(createTable.getProperties())
             .owner(callerId)
@@ -159,6 +168,18 @@ public class TableRepository {
         if (existingTable != null) {
           throw new BaseException(ErrorCode.ALREADY_EXISTS, "Table already exists: " + fullName);
         }
+        StorageCredentialInfo storageCredentialInfo = null;
+        if (createTable.getStorageCredentialName() != null) {
+          storageCredentialInfo =
+              STORAGE_CREDENTIAL_REPOSITORY.getStorageCredential(
+                  createTable.getStorageCredentialName());
+          if (storageCredentialInfo == null) {
+            throw new BaseException(
+                ErrorCode.NOT_FOUND,
+                "Storage credential not found: " + createTable.getStorageCredentialName());
+          }
+        }
+
         if (TableType.MANAGED.equals(tableInfo.getTableType())) {
           throw new BaseException(
               ErrorCode.INVALID_ARGUMENT, "MANAGED table creation is not supported yet.");
@@ -170,6 +191,9 @@ public class TableRepository {
         }
         TableInfoDAO tableInfoDAO = TableInfoDAO.from(tableInfo);
         tableInfoDAO.setSchemaId(schemaId);
+        if (storageCredentialInfo != null) {
+          tableInfoDAO.setStorageCredentialId(UUID.fromString(storageCredentialInfo.getId()));
+        }
         // create columns
         tableInfoDAO
             .getColumns()
@@ -285,6 +309,12 @@ public class TableRepository {
       }
       tableInfo.setCatalogName(catalogName);
       tableInfo.setSchemaName(schemaName);
+      if (tableInfoDAO.getStorageCredentialId() != null) {
+        StorageCredentialInfo storageCredentialInfo =
+            STORAGE_CREDENTIAL_REPOSITORY.getStorageCredential(
+                tableInfoDAO.getStorageCredentialId().toString());
+        tableInfo.setStorageCredentialName(storageCredentialInfo.getName());
+      }
       result.add(tableInfo);
     }
     return new ListTablesResponse().tables(result).nextPageToken(nextPageToken);

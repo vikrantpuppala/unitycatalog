@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.utils.Constants.URI_SCHEME_ABFS;
@@ -53,7 +54,7 @@ public class FileIOFactory {
 
   protected ADLSFileIO getADLSFileIO(URI tableLocationUri) {
     CredentialContext credentialContext = getCredentialContextFromTableLocation(tableLocationUri);
-    AzureCredential credential = credentialOps.vendAzureCredential(credentialContext);
+    AzureCredential credential = credentialOps.vendAzureCredential(credentialContext, Optional.empty());
     ADLSLocationUtils.ADLSLocationParts locationParts = ADLSLocationUtils.parseLocation(tableLocationUri.toString());
 
     // NOTE: when fileio caching is implemented, need to set/deal with expiry here
@@ -68,7 +69,7 @@ public class FileIOFactory {
   @SneakyThrows
   protected GCSFileIO getGCSFileIO(URI tableLocationUri) {
     CredentialContext credentialContext = getCredentialContextFromTableLocation(tableLocationUri);
-    AccessToken gcpToken = credentialOps.vendGcpToken(credentialContext);
+    AccessToken gcpToken = credentialOps.vendGcpToken(credentialContext, Optional.empty());
 
     // NOTE: when fileio caching is implemented, need to set/deal with expiry here
     Map<String, String> properties =
@@ -101,7 +102,7 @@ public class FileIOFactory {
 
   private AwsCredentialsProvider getAwsCredentialsProvider(CredentialContext context) {
     try {
-      Credentials awsSessionCredentials = credentialOps.vendAwsCredential(context);
+      Credentials awsSessionCredentials = credentialOps.vendAwsCredential(context, Optional.empty());
       return StaticCredentialsProvider.create(
         AwsSessionCredentials.create(awsSessionCredentials.accessKeyId(), awsSessionCredentials.secretAccessKey(), awsSessionCredentials.sessionToken()));
     } catch (BaseException e) {

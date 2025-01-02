@@ -2,7 +2,8 @@ package io.unitycatalog.server.base;
 
 import io.unitycatalog.server.UnityCatalogServer;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
-import io.unitycatalog.server.utils.TestUtils;
+import io.unitycatalog.server.utils.ServerProperties;
+import java.util.Properties;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -28,10 +29,15 @@ public abstract class BaseServerTest {
     if (serverConfig.getServerUrl().contains("localhost")) {
       System.out.println("Running tests on localhost..");
       // start the server on a random port
-      int port = TestUtils.getRandomPort();
+      int port = 8080;
       System.setProperty("server.env", "test");
-      unityCatalogServer = new UnityCatalogServer(port);
-      unityCatalogServer.start();
+      Properties properties = new Properties();
+      properties.put("metastore.s3.bucketPath", "s3://uc/test");
+      properties.put("metastore.s3.awsRoleArn", "arn:aws:iam::123456789012:role/unitycatalog-role");
+      properties.put("metastore.s3.region", "us-west-2");
+      ServerProperties serverProperties = new ServerProperties(properties);
+      unityCatalogServer = new UnityCatalogServer(port, serverProperties);
+      //      unityCatalogServer.start();
       serverConfig.setServerUrl("http://localhost:" + port);
     }
   }

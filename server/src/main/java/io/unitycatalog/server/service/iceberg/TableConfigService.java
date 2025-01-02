@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.service.credential.CredentialContext.Privilege.SELECT;
@@ -50,13 +51,13 @@ public class TableConfigService {
     ADLSLocationUtils.ADLSLocationParts locationParts =
       ADLSLocationUtils.parseLocation(context.getStorageBase());
 
-    AzureCredential azureCredential = credentialOperations.vendAzureCredential(context);
+    AzureCredential azureCredential = credentialOperations.vendAzureCredential(context, Optional.empty());
 
     return Map.of(AzureProperties.ADLS_SAS_TOKEN_PREFIX + locationParts.account(), azureCredential.getSasToken());
   }
 
   private Map<String, String> getGCSConfig(CredentialContext context) {
-    AccessToken token = credentialOperations.vendGcpToken(context);
+    AccessToken token = credentialOperations.vendGcpToken(context, Optional.empty());
 
     return Map.of(
       GCPProperties.GCS_OAUTH2_TOKEN, token.getTokenValue(),
@@ -64,7 +65,7 @@ public class TableConfigService {
   }
 
   private Map<String, String> getS3Config(CredentialContext context) {
-    Credentials awsCredential = credentialOperations.vendAwsCredential(context);
+    Credentials awsCredential = credentialOperations.vendAwsCredential(context, Optional.empty());
 
     return Map.of(S3FileIOProperties.ACCESS_KEY_ID, awsCredential.accessKeyId(),
       S3FileIOProperties.SECRET_ACCESS_KEY, awsCredential.secretAccessKey(),

@@ -35,9 +35,8 @@ public class StorageCredentialRepository {
   }
 
   public StorageCredentialInfo addStorageCredential(
-      CreateStorageCredential createStorageCredential) {
+      CreateStorageCredential createStorageCredential, String callerId) {
     ValidationUtils.validateSqlObjectName(createStorageCredential.getName());
-    String callerId = IdentityUtils.findPrincipalEmailAddress();
     UUID storageCredentialId = UUID.randomUUID();
     StorageCredentialInfo storageCredentialInfo =
         new StorageCredentialInfo()

@@ -90,7 +90,8 @@ public class MetastoreRepository {
     // TODO: this credential needs to be able to self-assume role
     //  or we could simply define two credentials: one to assume other roles and one for managed
     // storage
-    CreateStorageCredential createStorageCredential = new CreateStorageCredential();
+    CreateStorageCredential createStorageCredential =
+        new CreateStorageCredential().name("metastore-credentials");
     if (serverProperties.getMetastoreS3Config().isPresent()
         && !Objects.equals(
             metastoreDAO.getStorageRootUrl(),
@@ -101,7 +102,7 @@ public class MetastoreRepository {
       AwsIamRoleRequest awsIamRoleRequest =
           new AwsIamRoleRequest()
               .roleArn(serverProperties.getMetastoreS3Config().get().getAwsRoleArn());
-      createStorageCredential.awsIamRole(awsIamRoleRequest);
+      createStorageCredential.setAwsIamRole(awsIamRoleRequest);
     }
     if (serverProperties.getMetastoreAdlsConfig().isPresent()
         && !Objects.equals(
@@ -115,7 +116,7 @@ public class MetastoreRepository {
               .directoryId(serverProperties.getMetastoreAdlsConfig().get().getTenantId())
               .applicationId(serverProperties.getMetastoreAdlsConfig().get().getClientId())
               .clientSecret(serverProperties.getMetastoreAdlsConfig().get().getClientSecret());
-      createStorageCredential.azureServicePrincipal(azureServicePrincipal);
+      createStorageCredential.setAzureServicePrincipal(azureServicePrincipal);
     }
     if (serverProperties.getMetastoreGcsConfig().isPresent()
         && !Objects.equals(
@@ -126,6 +127,13 @@ public class MetastoreRepository {
               serverProperties.getMetastoreGcsConfig().get().getBucketPath()));
       // TODO: gcp creds
     }
-    STORAGE_CREDENTIAL_REPOSITORY.addStorageCredential(createStorageCredential);
+    if (createStorageCredential.getAwsIamRole() == null
+        && createStorageCredential.getAzureServicePrincipal() == null
+        && createStorageCredential.getAzureManagedIdentity() == null
+        && createStorageCredential.getDatabricksGcpServiceAccount() == null) {
+      LOGGER.info("No cloud storage credentials need to be created/updated.");
+    } else {
+      STORAGE_CREDENTIAL_REPOSITORY.addStorageCredential(createStorageCredential, "admin");
+    }
   }
 }

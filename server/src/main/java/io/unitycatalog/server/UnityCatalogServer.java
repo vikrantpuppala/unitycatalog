@@ -61,7 +61,10 @@ public class UnityCatalogServer {
   }
 
   public UnityCatalogServer(int port) {
+    this(port, ServerProperties.getInstance());
+  }
 
+  public UnityCatalogServer(int port, ServerProperties serverProperties) {
     Path configurationFolder = Path.of("etc", "conf");
 
     securityConfiguration = new SecurityConfiguration(configurationFolder);
@@ -69,12 +72,12 @@ public class UnityCatalogServer {
         new SecurityContext(configurationFolder, securityConfiguration, "server", INTERNAL);
 
     ServerBuilder sb = Server.builder().serviceUnder("/docs", new DocService()).http(port);
-    addServices(sb);
+    addServices(sb, serverProperties);
 
     server = sb.build();
   }
 
-  private void addServices(ServerBuilder sb) {
+  private void addServices(ServerBuilder sb, ServerProperties serverProperties) {
     ObjectMapper unityMapper =
         JsonMapper.builder().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
     JacksonRequestConverterFunction unityConverterFunction =
@@ -88,12 +91,9 @@ public class UnityCatalogServer {
     JacksonResponseConverterFunction scimResponseFunction =
         new JacksonResponseConverterFunction(responseMapper);
 
-    ServerProperties serverProperties = ServerProperties.getInstance();
     boolean authorizationEnabled = serverProperties.isAuthorizationEnabled();
-
     // Credentials Service
     CredentialOperations credentialOperations = new CredentialOperations(serverProperties);
-
     // Create a Metastore if one does not exist.
     MetastoreRepository.getInstance().initMetastoreIfNeeded(serverProperties);
 

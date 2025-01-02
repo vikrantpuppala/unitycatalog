@@ -9,10 +9,8 @@ import io.unitycatalog.server.auth.decorator.UnityAccessEvaluator;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.exception.GlobalExceptionHandler;
-import io.unitycatalog.server.model.GenerateTemporaryTableCredential;
-import io.unitycatalog.server.model.SecurableType;
-import io.unitycatalog.server.model.TableInfo;
-import io.unitycatalog.server.model.TableOperation;
+import io.unitycatalog.server.model.*;
+import io.unitycatalog.server.persist.StorageCredentialRepository;
 import io.unitycatalog.server.persist.TableRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.service.credential.CredentialOperations;
@@ -21,6 +19,7 @@ import lombok.SneakyThrows;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.model.SecurableType.METASTORE;
@@ -32,6 +31,7 @@ import static io.unitycatalog.server.service.credential.CredentialContext.Privil
 public class TemporaryTableCredentialsService {
 
   private static final TableRepository TABLE_REPOSITORY = TableRepository.getInstance();
+  private static final StorageCredentialRepository STORAGE_CREDENTIAL_REPOSITORY = StorageCredentialRepository.getInstance();
 
   private final UnityAccessEvaluator evaluator;
   private final CredentialOperations credentialOps;
@@ -48,9 +48,13 @@ public class TemporaryTableCredentialsService {
 
     String tableId = generateTemporaryTableCredential.getTableId();
     TableInfo tableInfo = TABLE_REPOSITORY.getTableById(tableId);
+    Optional<StorageCredentialInfo> optionalStorageCredential = Optional.empty();
+    if (tableInfo.getStorageCredentialName() != null) {
+      optionalStorageCredential = Optional.of(STORAGE_CREDENTIAL_REPOSITORY.getStorageCredential(tableInfo.getStorageCredentialName()));
+    }
     return HttpResponse.ofJson(credentialOps
             .vendCredential(tableInfo.getStorageLocation(),
-                    tableOperationToPrivileges(generateTemporaryTableCredential.getOperation())));
+                    tableOperationToPrivileges(generateTemporaryTableCredential.getOperation()), optionalStorageCredential));
   }
 
   private Set<CredentialContext.Privilege> tableOperationToPrivileges(TableOperation tableOperation) {

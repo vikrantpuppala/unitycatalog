@@ -40,7 +40,7 @@ public class StorageCredentialService {
     @AuthorizeExpression("#authorize(#principal, #metastore, OWNER)")
     @AuthorizeKey(METASTORE)
     public HttpResponse createStorageCredential(CreateStorageCredential createStorageCredential) {
-        StorageCredentialInfo storageCredentialInfo = REPOSITORY.addStorageCredential(createStorageCredential);
+        StorageCredentialInfo storageCredentialInfo = REPOSITORY.addStorageCredential(createStorageCredential, IdentityUtils.findPrincipalEmailAddress());
         initializeAuthorizations(storageCredentialInfo);
         return HttpResponse.ofJson(storageCredentialInfo);
     }
