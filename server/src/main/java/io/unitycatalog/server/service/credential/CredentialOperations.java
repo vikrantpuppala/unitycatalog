@@ -31,6 +31,7 @@ public class CredentialOperations {
     }
     this.azureCredentialVendor = new AzureCredentialVendor();
     this.gcpCredentialVendor = new GcpCredentialVendor();
+    // if server properties are for a test environment, then we need to use the test credentials
   }
 
   public TemporaryCredentials vendCredential(String path, Set<CredentialContext.Privilege> privileges, Optional<StorageCredentialInfo> optionalStorageCredential) {

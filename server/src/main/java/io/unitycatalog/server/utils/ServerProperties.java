@@ -14,42 +14,47 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ServerProperties {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(ServerProperties.class);
-  private static ServerProperties instance = null;
-  private final Properties properties;
-
-  public static final String SERVER_PROPERTIES_FILE = "etc/conf/server.properties";
-
-  private ServerProperties() {
-    properties = new Properties();
-    loadProperties();
+  public enum Environment {
+    PRODUCTION,
+    DEVELOPMENT,
+    TEST
   }
 
-  public ServerProperties(Properties properties) {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ServerProperties.class);
+  private static ServerProperties instance;
+  private final Properties properties;
+
+  private ServerProperties(Properties properties) {
     this.properties = properties;
+  }
+
+  public static synchronized void initialize(Properties properties) {
+    instance = new ServerProperties(properties);
   }
 
   public static ServerProperties getInstance() {
     if (instance == null) {
-      instance = new ServerProperties();
+      throw new IllegalStateException(
+          "ServerProperties not initialized. Please call initialize() first.");
     }
     return instance;
   }
 
   // Load properties from a configuration file
-  private void loadProperties() {
-    Path path = Paths.get(SERVER_PROPERTIES_FILE);
+  public static Properties readPropertiesFromFile(String serverPropertiesFile) {
+    Path path = Paths.get(serverPropertiesFile);
+    Properties fileProperties = new Properties();
     if (!path.toFile().exists()) {
       LOGGER.error("Server properties file not found: {}", path);
-      return;
+    } else {
+      try (InputStream input = Files.newInputStream(path)) {
+        fileProperties.load(input);
+        LOGGER.debug("Server properties loaded successfully: {}", path);
+      } catch (IOException ex) {
+        LOGGER.error("Exception during loading properties", ex);
+      }
     }
-    try (InputStream input = Files.newInputStream(path)) {
-      properties.load(input);
-      LOGGER.debug("Server properties loaded successfully: {}", path);
-    } catch (IOException ex) {
-      LOGGER.error("Exception during loading properties", ex);
-    }
+    return fileProperties;
   }
 
   public Optional<S3StorageConfig> getMetastoreS3Config() {
@@ -144,7 +149,12 @@ public class ServerProperties {
   }
 
   public boolean isAuthorizationEnabled() {
-    String authorization = getInstance().getProperty("server.authorization", "disable");
+    String authorization = properties.getProperty("server.authorization", "disable");
     return authorization.equalsIgnoreCase("enable");
+  }
+
+  public Environment getEnvironment() {
+    String env = properties.getProperty("server.env", "test");
+    return Environment.valueOf(env.toUpperCase());
   }
 }

@@ -25,6 +25,7 @@ import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.exception.ExceptionHandlingDecorator;
 import io.unitycatalog.server.exception.GlobalExceptionHandler;
 import io.unitycatalog.server.persist.MetastoreRepository;
+import io.unitycatalog.server.persist.utils.HibernateUtils;
 import io.unitycatalog.server.security.SecurityConfiguration;
 import io.unitycatalog.server.security.SecurityContext;
 import io.unitycatalog.server.service.*;
@@ -39,6 +40,7 @@ import io.unitycatalog.server.utils.VersionUtils;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import java.nio.file.Path;
+import java.util.Properties;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,7 @@ import org.slf4j.LoggerFactory;
 public class UnityCatalogServer {
   private static final Logger LOGGER = LoggerFactory.getLogger(UnityCatalogServer.class);
 
+  public static final String SERVER_PROPERTIES_FILE = "etc/conf/server.properties";
   private SecurityConfiguration securityConfiguration;
   private SecurityContext securityContext;
 
@@ -63,18 +66,23 @@ public class UnityCatalogServer {
   }
 
   public UnityCatalogServer(int port) {
-    this(port, ServerProperties.getInstance());
+    this(port, null);
   }
 
-  public UnityCatalogServer(int port, ServerProperties serverProperties) {
+  public UnityCatalogServer(int port, Properties properties) {
     Path configurationFolder = Path.of("etc", "conf");
 
     securityConfiguration = new SecurityConfiguration(configurationFolder);
     securityContext =
         new SecurityContext(configurationFolder, securityConfiguration, "server", INTERNAL);
 
+    if (properties == null) {
+      properties = ServerProperties.readPropertiesFromFile(SERVER_PROPERTIES_FILE);
+    }
+    ServerProperties.initialize(properties);
+    HibernateUtils.initialize();
     ServerBuilder sb = Server.builder().serviceUnder("/docs", new DocService()).http(port);
-    addServices(sb, serverProperties);
+    addServices(sb, ServerProperties.getInstance());
     sb.decorator(
         LoggingService.builder()
             .requestLogLevel(LogLevel.INFO) // Log incoming requests
@@ -120,7 +128,7 @@ public class UnityCatalogServer {
     AuthService authService = new AuthService(securityContext);
     PermissionService permissionService = new PermissionService(authorizer);
     Scim2UserService scim2UserService = new Scim2UserService(authorizer);
-    CatalogService catalogService = new CatalogService(authorizer);
+    CatalogService catalogService = new CatalogService(authorizer, serverProperties);
     SchemaService schemaService = new SchemaService(authorizer);
     VolumeService volumeService = new VolumeService(authorizer);
     TableService tableService = new TableService(authorizer);

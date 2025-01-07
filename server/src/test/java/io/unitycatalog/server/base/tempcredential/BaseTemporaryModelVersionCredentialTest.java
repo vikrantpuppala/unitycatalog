@@ -1,4 +1,4 @@
-package io.unitycatalog.server.base.credentials;
+package io.unitycatalog.server.base.tempcredential;
 
 import static io.unitycatalog.server.utils.TestUtils.*;
 import static io.unitycatalog.server.utils.TestUtils.CATALOG_NAME;
@@ -23,17 +23,17 @@ import org.hibernate.Transaction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDTest {
+public abstract class BaseTemporaryModelVersionCredentialTest extends BaseCRUDTest {
 
   protected SchemaOperations schemaOperations;
   protected ModelOperations modelOperations;
-  protected TemporaryCredentialsOperations credentialsOperations;
+  protected TemporaryCredentialOperations credentialOperations;
 
   protected abstract SchemaOperations createSchemaOperations(ServerConfig serverConfig);
 
   protected abstract ModelOperations createModelOperations(ServerConfig serverConfig);
 
-  protected abstract TemporaryCredentialsOperations createTemporaryCredentialsOperations(
+  protected abstract TemporaryCredentialOperations createTemporaryCredentialsOperations(
       ServerConfig serverConfig);
 
   @BeforeEach
@@ -42,7 +42,7 @@ public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDT
     super.setUp();
     schemaOperations = createSchemaOperations(serverConfig);
     modelOperations = createModelOperations(serverConfig);
-    credentialsOperations = createTemporaryCredentialsOperations(serverConfig);
+    credentialOperations = createTemporaryCredentialsOperations(serverConfig);
   }
 
   protected void createNonFileModelVersion(
@@ -151,7 +151,7 @@ public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDT
             .operation(ModelVersionOperation.READ_WRITE_MODEL_VERSION);
 
     assertThatThrownBy(
-            () -> credentialsOperations.generateTemporaryModelVersionCredentials(generateFileCreds))
+            () -> credentialOperations.generateTemporaryModelVersionCredentials(generateFileCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
 
@@ -166,7 +166,7 @@ public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDT
 
     assertThatThrownBy(
             () ->
-                credentialsOperations.generateTemporaryModelVersionCredentials(
+                credentialOperations.generateTemporaryModelVersionCredentials(
                     generateCloudFailedCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
@@ -182,7 +182,7 @@ public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDT
 
     assertThatThrownBy(
             () ->
-                credentialsOperations.generateTemporaryModelVersionCredentials(
+                credentialOperations.generateTemporaryModelVersionCredentials(
                     generateCloudUnknownCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
@@ -198,7 +198,7 @@ public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDT
 
     assertThatThrownBy(
             () ->
-                credentialsOperations.generateTemporaryModelVersionCredentials(
+                credentialOperations.generateTemporaryModelVersionCredentials(
                     generateCloudReadyCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
@@ -214,7 +214,7 @@ public abstract class BaseTemporaryModelVersionCredentialsTest extends BaseCRUDT
 
     assertThatThrownBy(
             () ->
-                credentialsOperations.generateTemporaryModelVersionCredentials(
+                credentialOperations.generateTemporaryModelVersionCredentials(
                     generateUnknownOperation))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());

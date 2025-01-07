@@ -2,12 +2,12 @@ package io.unitycatalog.server.persist.utils;
 
 import io.unitycatalog.server.persist.dao.*;
 import io.unitycatalog.server.utils.ServerProperties;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
-import lombok.Getter;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
@@ -16,21 +16,40 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HibernateUtils {
-
   private static final Logger LOGGER = LoggerFactory.getLogger(HibernateUtils.class);
 
-  @Getter private static final SessionFactory sessionFactory;
-  private static final ServerProperties properties;
-  @Getter private static final Properties hibernateProperties = new Properties();
+  private static SessionFactory sessionFactory;
+  private static Properties hibernateProperties;
 
-  static {
-    properties = ServerProperties.getInstance();
-    sessionFactory = createSessionFactory();
+  private HibernateUtils() {
+    // Private constructor to prevent instantiation
   }
 
-  private static SessionFactory createSessionFactory() {
+  public static synchronized void initialize() {
+    if (sessionFactory == null) {
+      hibernateProperties = new Properties();
+      sessionFactory = createSessionFactory(ServerProperties.getInstance());
+    }
+  }
+
+  public static SessionFactory getSessionFactory() {
+    if (sessionFactory == null) {
+      throw new RuntimeException("SessionFactory not initialized. Please call initialize() first.");
+    }
+    return sessionFactory;
+  }
+
+  public static Properties getHibernateProperties() {
+    if (hibernateProperties == null) {
+      throw new RuntimeException(
+          "Hibernate properties not initialized. Please call initialize() first.");
+    }
+    return hibernateProperties;
+  }
+
+  private static SessionFactory createSessionFactory(ServerProperties serverProperties) {
     try {
-      if (properties == null) {
+      if (serverProperties == null) {
         throw new RuntimeException("PropertiesUtil instance is null in createSessionFactory");
       }
 
@@ -46,7 +65,7 @@ public class HibernateUtils {
         hibernateProperties.load(input);
       }
 
-      if ("test".equals(properties.getProperty("server.env"))) {
+      if (serverProperties.getEnvironment().equals(ServerProperties.Environment.TEST)) {
         hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
         hibernateProperties.setProperty(
             "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
@@ -75,7 +94,7 @@ public class HibernateUtils {
           new StandardServiceRegistryBuilder().applySettings(configuration.getProperties()).build();
 
       return configuration.buildSessionFactory(serviceRegistry);
-    } catch (Exception e) {
+    } catch (IOException e) {
       throw new RuntimeException("Exception during creation of SessionFactory", e);
     }
   }

@@ -21,6 +21,7 @@ import io.unitycatalog.server.persist.CatalogRepository;
 import io.unitycatalog.server.persist.MetastoreRepository;
 import io.unitycatalog.server.persist.model.Privileges;
 import io.unitycatalog.server.utils.IdentityUtils;
+import io.unitycatalog.server.utils.ServerProperties;
 import lombok.SneakyThrows;
 
 import java.util.List;
@@ -38,7 +39,7 @@ public class CatalogService {
   private final UnityAccessEvaluator evaluator;
 
   @SneakyThrows
-  public CatalogService(UnityCatalogAuthorizer authorizer) {
+  public CatalogService(UnityCatalogAuthorizer authorizer, ServerProperties serverProperties) {
     this.authorizer = authorizer;
     evaluator = new UnityAccessEvaluator(authorizer);
   }

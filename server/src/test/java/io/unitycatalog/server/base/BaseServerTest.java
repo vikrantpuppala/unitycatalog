@@ -14,6 +14,7 @@ public abstract class BaseServerTest {
 
   public static ServerConfig serverConfig = new ServerConfig("http://localhost", "");
   protected static UnityCatalogServer unityCatalogServer;
+  protected static Properties initProperties = new Properties();
 
   @BeforeEach
   public void setUp() {
@@ -30,13 +31,9 @@ public abstract class BaseServerTest {
       System.out.println("Running tests on localhost..");
       // start the server on a random port
       int port = 8080;
-      System.setProperty("server.env", "test");
-      Properties properties = new Properties();
-      properties.put("metastore.s3.bucketPath", "s3://uc/test");
-      properties.put("metastore.s3.awsRoleArn", "arn:aws:iam::123456789012:role/unitycatalog-role");
-      properties.put("metastore.s3.region", "us-west-2");
-      ServerProperties serverProperties = new ServerProperties(properties);
-      unityCatalogServer = new UnityCatalogServer(port, serverProperties);
+      initProperties.put("server.env", "test");
+      ServerProperties.initialize(initProperties);
+      unityCatalogServer = new UnityCatalogServer(port);
       //      unityCatalogServer.start();
       serverConfig.setServerUrl("http://localhost:" + port);
     }
