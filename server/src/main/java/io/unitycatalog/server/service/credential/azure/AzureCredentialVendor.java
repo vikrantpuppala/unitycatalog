@@ -29,7 +29,7 @@ public class AzureCredentialVendor {
   public AzureCredential vendAzureCredential(
       CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
     ADLSLocationUtils.ADLSLocationParts locationParts =
-        ADLSLocationUtils.parseLocation(context.getStorageBase());
+        ADLSLocationUtils.parseLocation(context.getUri());
     AzureServicePrincipal azureServicePrincipal =
         optionalStorageCredential
             .orElse(EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context))
@@ -58,7 +58,7 @@ public class AzureCredentialVendor {
 
     // azure supports only downscoping to a single location for now
     // azure wants only the path
-    String path = URI.create(context.getLocations().get(0)).getPath();
+    String path = URI.create(context.getUri()).getPath();
     // remove any preceding forward slashes or trailing forward slashes
     // hadoop ABFS strips trailing slash when preforming some operations so we need to vend
     // a cred for path without trailing slash

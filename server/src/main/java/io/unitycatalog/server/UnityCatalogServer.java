@@ -8,11 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.logging.LoggingService;
 import io.unitycatalog.server.auth.AllowingAuthorizer;
 import io.unitycatalog.server.auth.JCasbinAuthorizer;
 import io.unitycatalog.server.auth.UnityCatalogAuthorizer;
@@ -73,7 +75,12 @@ public class UnityCatalogServer {
 
     ServerBuilder sb = Server.builder().serviceUnder("/docs", new DocService()).http(port);
     addServices(sb, serverProperties);
-
+    sb.decorator(
+        LoggingService.builder()
+            .requestLogLevel(LogLevel.INFO) // Log incoming requests
+            .successfulResponseLogLevel(LogLevel.INFO) // Log successful responses
+            .failureResponseLogLevel(LogLevel.WARN) // Log failure responses
+            .newDecorator());
     server = sb.build();
   }
 
@@ -97,7 +104,7 @@ public class UnityCatalogServer {
     // Create a Metastore if one does not exist.
     MetastoreRepository.getInstance().initMetastoreIfNeeded(serverProperties);
 
-    UnityCatalogAuthorizer authorizer = null;
+    UnityCatalogAuthorizer authorizer;
     try {
       if (authorizationEnabled) {
         authorizer = new JCasbinAuthorizer();

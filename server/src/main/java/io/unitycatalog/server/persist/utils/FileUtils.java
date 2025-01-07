@@ -212,7 +212,8 @@ public class FileUtils {
   public static List<String> getParentPathsList(String url) {
     List<String> parentPaths = new ArrayList<>();
     Path path = Paths.get(url);
-
+    // Self include the path
+    parentPaths.add(path.toString().replaceAll("/$", "")); // Strip trailing slash
     while (path != null) {
       path = path.getParent();
       if (path != null) {

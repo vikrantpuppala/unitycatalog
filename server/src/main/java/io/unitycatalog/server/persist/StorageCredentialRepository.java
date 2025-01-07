@@ -112,6 +112,16 @@ public class StorageCredentialRepository {
     return query.uniqueResult();
   }
 
+  protected StorageCredentialDAO getStorageCredentialDAOById(
+      Session session, UUID storageCredentialId) {
+    Query<StorageCredentialDAO> query =
+        session.createQuery(
+            "FROM StorageCredentialDAO WHERE id = :value", StorageCredentialDAO.class);
+    query.setParameter("value", storageCredentialId);
+    query.setMaxResults(1);
+    return query.uniqueResult();
+  }
+
   public ListStorageCredentialsResponse listStorageCredentials(
       Optional<Integer> maxResults, Optional<String> pageToken) {
     try (Session session = SESSION_FACTORY.openSession()) {

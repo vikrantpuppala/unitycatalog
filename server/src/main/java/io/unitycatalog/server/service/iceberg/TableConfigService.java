@@ -48,8 +48,7 @@ public class TableConfigService {
   }
 
   private Map<String, String> getADLSConfig(CredentialContext context) {
-    ADLSLocationUtils.ADLSLocationParts locationParts =
-      ADLSLocationUtils.parseLocation(context.getStorageBase());
+    ADLSLocationUtils.ADLSLocationParts locationParts = ADLSLocationUtils.parseLocation(context.getUri());
 
     AzureCredential azureCredential = credentialOperations.vendAzureCredential(context, Optional.empty());
 

@@ -15,7 +15,7 @@ public class CredentialContext {
   }
 
   private String storageScheme;
-  private String storageBase;
+  private String uri;
   private Set<Privilege> privileges;
   // This is a list of locations to be a little future-proofing when a table could
   // have more than 1 location where files belonging to table are located
@@ -25,7 +25,7 @@ public class CredentialContext {
     return CredentialContext.builder()
         .privileges(privileges)
         .storageScheme(locationURI.getScheme())
-        .storageBase(locationURI.getScheme() + "://" + locationURI.getAuthority())
+        .uri(locationURI.toString())
         .locations(List.of(locationURI.toString()))
         .build();
   }

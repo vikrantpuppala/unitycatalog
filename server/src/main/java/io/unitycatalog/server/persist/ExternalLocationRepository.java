@@ -12,6 +12,7 @@ import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -45,7 +46,9 @@ public class ExternalLocationRepository {
               .id(externalLocationId)
               .name(createExternalLocation.getName())
               .url(createExternalLocation.getUrl())
-              .readOnly(createExternalLocation.getReadOnly())
+              .readOnly(
+                  createExternalLocation.getReadOnly() != null
+                      && createExternalLocation.getReadOnly())
               .comment(createExternalLocation.getComment())
               .owner(callerId)
               .accessPoint(createExternalLocation.getAccessPoint())
@@ -202,28 +205,38 @@ public class ExternalLocationRepository {
     try (Session session = SESSION_FACTORY.openSession()) {
       session.setDefaultReadOnly(true);
       Transaction tx = session.beginTransaction();
-      try {
-        List<ExternalLocationInfo> externalLocations =
-            listExternalLocations(Optional.empty(), Optional.empty()).getExternalLocations()
-                .stream()
-                .filter(el -> el.getUrl().startsWith(context.getStorageScheme()))
-                .toList();
-        List<String> parentPaths = FileUtils.getParentPathsList(context.getStorageBase());
-        Optional<ExternalLocationInfo> externalLocationToUse =
-            externalLocations.stream().filter(el -> parentPaths.contains(el.getUrl())).findFirst();
-        if (externalLocationToUse.isEmpty()) {
-          throw new BaseException(
-              ErrorCode.FAILED_PRECONDITION, "No external location found for the given path.");
+      List<ExternalLocationInfo> externalLocations =
+          listExternalLocations(Optional.empty(), Optional.empty()).getExternalLocations().stream()
+              .filter(el -> el.getUrl().startsWith(context.getStorageScheme()))
+              .toList();
+      List<String> parentPaths = FileUtils.getParentPathsList(context.getUri());
+      Optional<ExternalLocationInfo> externalLocationToUse = Optional.empty();
+      for (String parentPath : parentPaths) {
+        for (ExternalLocationInfo externalLocation : externalLocations) {
+          if (externalLocation.getUrl().startsWith(parentPath)) {
+            externalLocationToUse = Optional.of(externalLocation);
+            break;
+          }
         }
-        StorageCredentialDAO storageCredentialDAO =
-            STORAGE_CREDENTIAL_REPOSITORY.getStorageCredentialDAO(
-                session, externalLocationToUse.get().getCredentialId());
-        tx.commit();
-        return storageCredentialDAO.toStorageCredentialInfo();
-      } catch (Exception e) {
-        tx.rollback();
-        throw e;
+        if (externalLocationToUse.isPresent()) {
+          break;
+        }
       }
+      if (externalLocationToUse.isEmpty()) {
+        throw new BaseException(
+            ErrorCode.FAILED_PRECONDITION,
+            "No external location found for path: "
+                + context.getUri()
+                + " among "
+                + externalLocations.stream()
+                    .map(ExternalLocationInfo::getUrl)
+                    .collect(Collectors.joining(", ")));
+      }
+      StorageCredentialDAO storageCredentialDAO =
+          STORAGE_CREDENTIAL_REPOSITORY.getStorageCredentialDAOById(
+              session, UUID.fromString(externalLocationToUse.get().getCredentialId()));
+      tx.commit();
+      return storageCredentialDAO.toStorageCredentialInfo();
     }
   }
 }
