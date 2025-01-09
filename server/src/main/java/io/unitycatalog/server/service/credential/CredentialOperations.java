@@ -24,13 +24,15 @@ public class CredentialOperations {
   private AwsCredentialVendor awsCredentialVendor = null;
   private AzureCredentialVendor azureCredentialVendor = null;
   private GcpCredentialVendor gcpCredentialVendor = null;
+  private ServerProperties serverProperties;
 
   public CredentialOperations(ServerProperties serverProperties) {
     if (serverProperties.getMetastoreS3Config().isPresent()) {
-      this.awsCredentialVendor = new AwsCredentialVendor(serverProperties.getMetastoreS3Config().get());
+      this.awsCredentialVendor = new AwsCredentialVendor(serverProperties);
     }
-    this.azureCredentialVendor = new AzureCredentialVendor();
-    this.gcpCredentialVendor = new GcpCredentialVendor();
+    this.azureCredentialVendor = new AzureCredentialVendor(serverProperties);
+    this.gcpCredentialVendor = new GcpCredentialVendor(serverProperties);
+    this.serverProperties = serverProperties;
     // if server properties are for a test environment, then we need to use the test credentials
   }
 

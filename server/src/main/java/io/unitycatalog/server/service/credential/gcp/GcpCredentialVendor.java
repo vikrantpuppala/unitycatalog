@@ -8,6 +8,7 @@ import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.StorageCredentialInfo;
 import io.unitycatalog.server.service.credential.CredentialContext;
+import io.unitycatalog.server.utils.ServerProperties;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
@@ -22,12 +23,19 @@ public class GcpCredentialVendor {
   public static final List<String> INITIAL_SCOPES =
       List.of("https://www.googleapis.com/auth/cloud-platform");
 
-  public GcpCredentialVendor() {}
+  private final ServerProperties serverProperties;
+
+  public GcpCredentialVendor(ServerProperties serverProperties) {
+    this.serverProperties = serverProperties;
+  }
 
   @SneakyThrows
   public AccessToken vendGcpToken(
       CredentialContext credentialContext,
       Optional<StorageCredentialInfo> optionalStorageCredential) {
+    if (serverProperties.getEnvironment().equals(ServerProperties.Environment.TEST)) {
+      return new AccessToken("test-gcp-token", null);
+    }
     //    String serviceAccountKeyJsonFilePath =
     // metastoreGcsConfig.getServiceAccountKeyJsonFilePath();
     //

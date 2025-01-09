@@ -15,6 +15,7 @@ import io.unitycatalog.server.model.AzureServicePrincipal;
 import io.unitycatalog.server.model.StorageCredentialInfo;
 import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
+import io.unitycatalog.server.utils.ServerProperties;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -23,8 +24,11 @@ import java.util.Set;
 public class AzureCredentialVendor {
   private static final ExternalLocationRepository EXTERNAL_LOCATION_REPOSITORY =
       ExternalLocationRepository.getInstance();
+  private final ServerProperties serverProperties;
 
-  public AzureCredentialVendor() {}
+  public AzureCredentialVendor(ServerProperties serverProperties) {
+    this.serverProperties = serverProperties;
+  }
 
   public AzureCredential vendAzureCredential(
       CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
@@ -34,12 +38,24 @@ public class AzureCredentialVendor {
         optionalStorageCredential
             .orElse(EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context))
             .getAzureServicePrincipal();
+    if (azureServicePrincipal == null) {
+      throw new IllegalArgumentException(
+          "No storage credentials found for path: " + context.getUri());
+    }
     ADLSStorageConfig adlsStorageConfig =
         ADLSStorageConfig.builder()
             .tenantId(azureServicePrincipal.getDirectoryId())
             .clientId(azureServicePrincipal.getApplicationId())
             .clientSecret(azureServicePrincipal.getClientSecret())
             .build();
+    // Return tests credentials only after ensuring that storage credentials for the path have been
+    // created
+    if (serverProperties.getEnvironment().equals(ServerProperties.Environment.TEST)) {
+      return AzureCredential.builder()
+          .sasToken("test-sas-token")
+          .expirationTimeInEpochMillis(System.currentTimeMillis() + 3600000)
+          .build();
+    }
     DataLakeServiceAsyncClient serviceClient =
         new DataLakeServiceClientBuilder()
             .httpClient(HttpClient.createDefault())

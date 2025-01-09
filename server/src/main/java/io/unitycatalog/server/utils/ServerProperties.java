@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 
 public class ServerProperties {
   public enum Environment {
-    PRODUCTION,
-    DEVELOPMENT,
+    PROD,
+    DEV,
     TEST
   }
 

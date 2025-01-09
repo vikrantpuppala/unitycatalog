@@ -2,7 +2,7 @@ package io.unitycatalog.server.base;
 
 import io.unitycatalog.server.UnityCatalogServer;
 import io.unitycatalog.server.persist.utils.HibernateUtils;
-import io.unitycatalog.server.utils.ServerProperties;
+import io.unitycatalog.server.utils.TestUtils;
 import java.util.Properties;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -30,11 +30,10 @@ public abstract class BaseServerTest {
     if (serverConfig.getServerUrl().contains("localhost")) {
       System.out.println("Running tests on localhost..");
       // start the server on a random port
-      int port = 8080;
+      int port = TestUtils.getRandomPort();
       initProperties.put("server.env", "test");
-      ServerProperties.initialize(initProperties);
-      unityCatalogServer = new UnityCatalogServer(port);
-      //      unityCatalogServer.start();
+      unityCatalogServer = new UnityCatalogServer(port, initProperties);
+      unityCatalogServer.start();
       serverConfig.setServerUrl("http://localhost:" + port);
     }
   }

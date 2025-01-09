@@ -3,6 +3,7 @@ package io.unitycatalog.server.service.credential.aws;
 import io.unitycatalog.server.model.StorageCredentialInfo;
 import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
+import io.unitycatalog.server.utils.ServerProperties;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,15 +18,33 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 public class AwsCredentialVendor {
   private final S3StorageConfig metastoreS3StorageConfiguration;
   private StsClient metastoreStsClient;
+  private final ServerProperties serverProperties;
   private static final ExternalLocationRepository EXTERNAL_LOCATION_REPOSITORY =
       ExternalLocationRepository.getInstance();
 
-  public AwsCredentialVendor(S3StorageConfig metastoreS3StorageConfiguration) {
-    this.metastoreS3StorageConfiguration = metastoreS3StorageConfiguration;
+  public AwsCredentialVendor(ServerProperties serverProperties) {
+    this.serverProperties = serverProperties;
+    this.metastoreS3StorageConfiguration = serverProperties.getMetastoreS3Config().orElseThrow();
   }
 
   public Credentials vendAwsCredentials(
       CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
+    StorageCredentialInfo storageCredentialInfo =
+        optionalStorageCredential.orElse(
+            EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context));
+    if (storageCredentialInfo == null) {
+      throw new IllegalArgumentException(
+          "No storage credentials found for path: " + context.getUri());
+    }
+    // Only return the test credentials after verifying that storage credentials for the path exist
+    // in the repository
+    if (serverProperties.getEnvironment().equals(ServerProperties.Environment.TEST)) {
+      return Credentials.builder()
+          .accessKeyId("test-access-key-id")
+          .secretAccessKey("test-secret-access-key")
+          .sessionToken("test-session-token")
+          .build();
+    }
     if (this.metastoreStsClient == null) {
       this.metastoreStsClient = getStsClientForStorageConfig(metastoreS3StorageConfiguration);
     }
@@ -33,9 +52,6 @@ public class AwsCredentialVendor {
     String roleSessionName = "uc-%s".formatted(UUID.randomUUID());
     String awsPolicy =
         AwsPolicyGenerator.generatePolicy(context.getPrivileges(), context.getLocations());
-    StorageCredentialInfo storageCredentialInfo =
-        optionalStorageCredential.orElse(
-            EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context));
     return metastoreStsClient
         .assumeRole(
             r ->
