@@ -1,7 +1,9 @@
 package io.unitycatalog.server.persist.dao;
 
 import io.unitycatalog.server.model.ExternalLocationInfo;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -9,7 +11,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "uc_external_location")
+@Table(name = "uc_external_locations")
 // Lombok
 @Getter
 @Setter
@@ -22,17 +24,11 @@ public class ExternalLocationDAO extends IdentifiableDAO {
   @Column(name = "url", nullable = false)
   private String url;
 
-  @Column(name = "read_only", nullable = false)
-  private Boolean readOnly;
-
   @Column(name = "comment")
   private String comment;
 
   @Column(name = "owner")
   private String owner;
-
-  @Column(name = "access_point")
-  private String accessPoint;
 
   @Column(name = "credential_id", nullable = false)
   private UUID credentialId;
@@ -53,10 +49,8 @@ public class ExternalLocationDAO extends IdentifiableDAO {
     return ExternalLocationDAO.builder()
         .name(externalLocationInfo.getName())
         .url(externalLocationInfo.getUrl())
-        .readOnly(externalLocationInfo.getReadOnly())
         .comment(externalLocationInfo.getComment())
         .owner(externalLocationInfo.getOwner())
-        .accessPoint(externalLocationInfo.getAccessPoint())
         .credentialId(
             externalLocationInfo.getCredentialId() != null
                 ? UUID.fromString(externalLocationInfo.getCredentialId())
@@ -78,10 +72,8 @@ public class ExternalLocationDAO extends IdentifiableDAO {
     return new ExternalLocationInfo()
         .name(getName())
         .url(getUrl())
-        .readOnly(getReadOnly())
         .comment(getComment())
         .owner(getOwner())
-        .accessPoint(getAccessPoint())
         .credentialId(getCredentialId() != null ? getCredentialId().toString() : null)
         .createdAt(getCreatedAt().getTime())
         .createdBy(getCreatedBy())

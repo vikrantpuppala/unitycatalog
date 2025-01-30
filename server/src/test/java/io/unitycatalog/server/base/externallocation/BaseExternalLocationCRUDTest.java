@@ -10,6 +10,7 @@ import io.unitycatalog.client.model.*;
 import io.unitycatalog.server.base.BaseCRUDTest;
 import io.unitycatalog.server.base.ServerConfig;
 import io.unitycatalog.server.base.storagecredential.StorageCredentialOperations;
+import io.unitycatalog.server.exception.ErrorCode;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,13 +48,17 @@ public abstract class BaseExternalLocationCRUDTest extends BaseCRUDTest {
             .name(EXTERNAL_LOCATION_NAME)
             .comment(COMMENT)
             .url(URL)
-            .credentialName(CREDENTIAL_NAME)
-            .readOnly(false);
-
+            .credentialName(CREDENTIAL_NAME);
     // Fails as the credential does not exist
     assertThatThrownBy(
             () -> externalLocationOperations.createExternalLocation(createExternalLocation))
-        .isInstanceOf(ApiException.class);
+        .isInstanceOf(ApiException.class)
+        .hasFieldOrPropertyWithValue("code", ErrorCode.NOT_FOUND.getHttpStatus().code())
+        .hasMessageContaining("Storage credential not found: " + CREDENTIAL_NAME);
+
+    assertThat(externalLocationOperations.listExternalLocations(Optional.empty()))
+        .noneMatch(
+            externalLocationInfo -> externalLocationInfo.getName().equals(EXTERNAL_LOCATION_NAME));
 
     CreateStorageCredential createStorageCredential =
         new CreateStorageCredential()
@@ -69,7 +74,6 @@ public abstract class BaseExternalLocationCRUDTest extends BaseCRUDTest {
     assertThat(externalLocationInfo.getComment()).isEqualTo(COMMENT);
     assertThat(externalLocationInfo.getUrl()).isEqualTo(URL);
     assertThat(externalLocationInfo.getCredentialId()).isEqualTo(storageCredentialInfo.getId());
-    assertThat(externalLocationInfo.getReadOnly()).isFalse();
 
     // List external locations
     assertThat(externalLocationOperations.listExternalLocations(Optional.empty()))
@@ -84,8 +88,7 @@ public abstract class BaseExternalLocationCRUDTest extends BaseCRUDTest {
         new UpdateExternalLocation()
             .newName(NEW_EXTERNAL_LOCATION_NAME)
             .comment(COMMENT2)
-            .url(NEW_URL)
-            .readOnly(true);
+            .url(NEW_URL);
     ExternalLocationInfo updatedExternalLocationInfo =
         externalLocationOperations.updateExternalLocation(
             EXTERNAL_LOCATION_NAME, updateExternalLocation);
@@ -94,7 +97,6 @@ public abstract class BaseExternalLocationCRUDTest extends BaseCRUDTest {
     assertThat(updatedExternalLocationInfo.getUrl()).isEqualTo(NEW_URL);
     assertThat(updatedExternalLocationInfo.getCredentialId())
         .isEqualTo(storageCredentialInfo.getId());
-    assertThat(updatedExternalLocationInfo.getReadOnly()).isTrue();
 
     // Delete external location
     externalLocationOperations.deleteExternalLocation(NEW_EXTERNAL_LOCATION_NAME);

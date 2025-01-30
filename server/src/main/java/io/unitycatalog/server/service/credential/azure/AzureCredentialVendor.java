@@ -1,5 +1,7 @@
 package io.unitycatalog.server.service.credential.azure;
 
+import static java.lang.String.format;
+
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.http.HttpClient;
 import com.azure.core.util.Context;
@@ -11,40 +13,54 @@ import com.azure.storage.file.datalake.implementation.util.DataLakeSasImplUtil;
 import com.azure.storage.file.datalake.models.UserDelegationKey;
 import com.azure.storage.file.datalake.sas.DataLakeServiceSasSignatureValues;
 import com.azure.storage.file.datalake.sas.PathSasPermission;
-import io.unitycatalog.server.model.AzureServicePrincipal;
-import io.unitycatalog.server.model.StorageCredentialInfo;
-import io.unitycatalog.server.persist.ExternalLocationRepository;
 import io.unitycatalog.server.service.credential.CredentialContext;
+import io.unitycatalog.server.utils.ServerProperties;
 import java.net.URI;
 import java.time.OffsetDateTime;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 
 public class AzureCredentialVendor {
-  private static final ExternalLocationRepository EXTERNAL_LOCATION_REPOSITORY =
-      ExternalLocationRepository.getInstance();
 
-  public AzureCredentialVendor() {}
+  private final Map<String, ADLSStorageConfig> adlsConfigurations;
 
-  public AzureCredential vendAzureCredential(
-      CredentialContext context, Optional<StorageCredentialInfo> optionalStorageCredential) {
+  public AzureCredentialVendor(ServerProperties serverProperties) {
+    this.adlsConfigurations = serverProperties.getAdlsConfigurations();
+  }
+
+  public AzureCredential vendAzureCredential(CredentialContext context) {
     ADLSLocationUtils.ADLSLocationParts locationParts =
-        ADLSLocationUtils.parseLocation(context.getUri());
-    AzureServicePrincipal azureServicePrincipal =
-        optionalStorageCredential
-            .orElse(EXTERNAL_LOCATION_REPOSITORY.getStorageCredentialsForPath(context))
-            .getAzureServicePrincipal();
-    ADLSStorageConfig adlsStorageConfig =
-        ADLSStorageConfig.builder()
-            .tenantId(azureServicePrincipal.getDirectoryId())
-            .clientId(azureServicePrincipal.getApplicationId())
-            .clientSecret(azureServicePrincipal.getClientSecret())
+        ADLSLocationUtils.parseLocation(context.getStorageBase());
+    ADLSStorageConfig config = adlsConfigurations.get(locationParts.accountName());
+
+    TokenCredential tokenCredential;
+    if (config == null) {
+      // fallback to creating credential from environment variables (or somewhere on the default
+      // chain)
+      tokenCredential = new DefaultAzureCredentialBuilder().build();
+    } else {
+      if (config.isTestMode()) {
+        // allow pass-through of a dummy value for integration testing
+        return AzureCredential.builder()
+            .sasToken(
+                format(
+                    "%s/%s/%s",
+                    config.getTenantId(), config.getClientId(), config.getClientSecret()))
+            .expirationTimeInEpochMillis(253370790000000L)
             .build();
+      }
+      tokenCredential =
+          new ClientSecretCredentialBuilder()
+              .tenantId(config.getTenantId())
+              .clientId(config.getClientId())
+              .clientSecret(config.getClientSecret())
+              .build();
+    }
     DataLakeServiceAsyncClient serviceClient =
         new DataLakeServiceClientBuilder()
             .httpClient(HttpClient.createDefault())
             .endpoint("https://" + locationParts.account())
-            .credential(getTokenCredential(adlsStorageConfig))
+            .credential(tokenCredential)
             .buildAsyncClient();
 
     // TODO: possibly make this configurable - defaulted to 1 hour right now
@@ -58,7 +74,7 @@ public class AzureCredentialVendor {
 
     // azure supports only downscoping to a single location for now
     // azure wants only the path
-    String path = URI.create(context.getUri()).getPath();
+    String path = URI.create(context.getLocations().get(0)).getPath();
     // remove any preceding forward slashes or trailing forward slashes
     // hadoop ABFS strips trailing slash when preforming some operations so we need to vend
     // a cred for path without trailing slash
@@ -74,20 +90,7 @@ public class AzureCredentialVendor {
         .build();
   }
 
-  private static TokenCredential getTokenCredential(ADLSStorageConfig adlsStorageConfig) {
-    if (adlsStorageConfig == null) {
-      // fallback to creating credential from environment variables (or somewhere on the default
-      // chain)
-      return new DefaultAzureCredentialBuilder().build();
-    }
-    return new ClientSecretCredentialBuilder()
-        .tenantId(adlsStorageConfig.getTenantId())
-        .clientId(adlsStorageConfig.getClientId())
-        .clientSecret(adlsStorageConfig.getClientSecret())
-        .build();
-  }
-
-  private static PathSasPermission resolvePrivileges(Set<CredentialContext.Privilege> privileges) {
+  private PathSasPermission resolvePrivileges(Set<CredentialContext.Privilege> privileges) {
     PathSasPermission result = new PathSasPermission();
     if (privileges.contains(CredentialContext.Privilege.UPDATE)) {
       result.setWritePermission(true);
