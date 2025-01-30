@@ -19,7 +19,9 @@ import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +100,7 @@ public class FileOperations {
 
   public void deleteDirectory(String path) {
     URI directoryUri = createURI(path);
-    validateURI(directoryUri);
+    UriUtils.validateURI(directoryUri);
     if (directoryUri.getScheme() == null || directoryUri.getScheme().equals("file")) {
       try {
         deleteLocalDirectory(Paths.get(directoryUri));
@@ -211,17 +213,23 @@ public class FileOperations {
     return scheme != null && Constants.SUPPORTED_SCHEMES.contains(scheme);
   }
 
-  private static void validateURI(URI uri) {
-    if (uri.getScheme() == null) {
-      throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Invalid path: " + uri.getPath());
-    }
-    URI normalized = uri.normalize();
-    if (!normalized.getPath().startsWith(uri.getPath())) {
-      throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Normalization failed: " + uri.getPath());
-    }
-  }
+  public static List<String> getParentPathsList(String url) {
+    List<String> parentPaths = new ArrayList<>();
+    Path path = Paths.get(url);
 
-  public static void assertValidLocation(String location) {
-    validateURI(URI.create(location));
+    while (path != null) {
+      path = path.getParent();
+      if (path != null) {
+        try {
+          String normalizedPath = path.toString().replaceAll("/$", ""); // Strip trailing slash
+          parentPaths.add(normalizedPath);
+        } catch (Exception e) {
+          // Ignore invalid paths
+          LOGGER.error("Failed to get parent paths", e);
+        }
+      }
+    }
+
+    return parentPaths;
   }
 }

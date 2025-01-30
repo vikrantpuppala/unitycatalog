@@ -6,7 +6,9 @@ import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.persist.dao.StorageCredentialDAO;
+import io.unitycatalog.server.persist.utils.FileOperations;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.time.Instant;
@@ -207,6 +209,40 @@ public class StorageCredentialRepository {
       } catch (Exception e) {
         tx.rollback();
         LOGGER.error("Failed to delete storage credential", e);
+        throw e;
+      }
+    }
+  }
+
+  public Optional<StorageCredentialInfo> getStorageCredentialsForPath(CredentialContext context) {
+    try (Session session = sessionFactory.openSession()) {
+      session.setDefaultReadOnly(true);
+      Transaction tx = session.beginTransaction();
+      try {
+        List<ExternalLocationInfo> results =
+            session
+                .createQuery(
+                    "SELECT el FROM ExternalLocationDAO el " + "WHERE el.url IN :parentPaths",
+                    ExternalLocationInfo.class)
+                .setParameter(
+                    "parentPaths", FileOperations.getParentPathsList(context.getStorageBase()))
+                .getResultList();
+        if (results.isEmpty()) {
+          return Optional.empty();
+        }
+        ExternalLocationInfo externalLocationToUse = results.get(0);
+        StorageCredentialDAO storageCredentialDAO =
+            repositories
+                .getStorageCredentialRepository()
+                .getStorageCredentialDAO(session, externalLocationToUse.getCredentialId());
+        if (storageCredentialDAO == null) {
+          return Optional.empty();
+        }
+        tx.commit();
+        return Optional.of(storageCredentialDAO.toStorageCredentialInfo());
+      } catch (Exception e) {
+        tx.rollback();
+        LOGGER.error("Failed to retrieve storage credential", e);
         throw e;
       }
     }

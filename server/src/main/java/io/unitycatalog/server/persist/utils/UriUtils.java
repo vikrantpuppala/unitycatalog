@@ -129,7 +129,7 @@ public class UriUtils {
     return parsedUri;
   }
 
-  private static void validateURI(URI uri) {
+  public static void validateURI(URI uri) {
     if (uri.getScheme() == null) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Invalid path: " + uri.getPath());
     }
@@ -137,5 +137,9 @@ public class UriUtils {
     if (!normalized.getPath().startsWith(uri.getPath())) {
       throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Normalization failed: " + uri.getPath());
     }
+  }
+
+  public static void assertValidLocation(String location) {
+    validateURI(URI.create(location));
   }
 }
