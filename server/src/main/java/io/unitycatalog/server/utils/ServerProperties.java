@@ -2,123 +2,125 @@ package io.unitycatalog.server.utils;
 
 import io.unitycatalog.server.service.credential.aws.S3StorageConfig;
 import io.unitycatalog.server.service.credential.azure.ADLSStorageConfig;
-import io.unitycatalog.server.service.credential.gcp.GCSStorageConfig;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ServerProperties {
-  public enum Environment {
-    PROD,
-    DEV,
-    TEST
-  }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerProperties.class);
-  private static ServerProperties instance;
   private final Properties properties;
 
-  private ServerProperties(Properties properties) {
+  public ServerProperties() {
+    this(new Properties());
+  }
+
+  public ServerProperties(String propertiesFile) {
+    this(PropertyUtils.readPropertiesFromFile(propertiesFile));
+  }
+
+  public ServerProperties(Properties properties) {
     this.properties = properties;
   }
 
-  public static synchronized void initialize(Properties properties) {
-    instance = new ServerProperties(properties);
-  }
-
-  public static ServerProperties getInstance() {
-    if (instance == null) {
-      throw new IllegalStateException(
-          "ServerProperties not initialized. Please call initialize() first.");
-    }
-    return instance;
-  }
-
-  // Load properties from a configuration file
-  public static Properties readPropertiesFromFile(String serverPropertiesFile) {
-    Path path = Paths.get(serverPropertiesFile);
-    Properties fileProperties = new Properties();
-    if (!path.toFile().exists()) {
-      LOGGER.error("Server properties file not found: {}", path);
-    } else {
-      try (InputStream input = Files.newInputStream(path)) {
-        fileProperties.load(input);
-        LOGGER.debug("Server properties loaded successfully: {}", path);
-      } catch (IOException ex) {
-        LOGGER.error("Exception during loading properties", ex);
+  public Map<String, S3StorageConfig> getS3Configurations() {
+    Map<String, S3StorageConfig> s3BucketConfigMap = new HashMap<>();
+    int i = 0;
+    while (true) {
+      String bucketPath = properties.getProperty("s3.bucketPath." + i);
+      String region = properties.getProperty("s3.region." + i);
+      String awsRoleArn = properties.getProperty("s3.awsRoleArn." + i);
+      String accessKey = properties.getProperty("s3.accessKey." + i);
+      String secretKey = properties.getProperty("s3.secretKey." + i);
+      String sessionToken = properties.getProperty("s3.sessionToken." + i);
+      if ((bucketPath == null || region == null || awsRoleArn == null)
+          && (accessKey == null || secretKey == null || sessionToken == null)) {
+        break;
       }
+      S3StorageConfig s3StorageConfig =
+          S3StorageConfig.builder()
+              .bucketPath(bucketPath)
+              .region(region)
+              .awsRoleArn(awsRoleArn)
+              .accessKey(accessKey)
+              .secretKey(secretKey)
+              .sessionToken(sessionToken)
+              .build();
+      s3BucketConfigMap.put(bucketPath, s3StorageConfig);
+      i++;
     }
-    return fileProperties;
+
+    return s3BucketConfigMap;
   }
 
-  public Optional<S3StorageConfig> getMetastoreS3Config() {
-    String bucketPath = properties.getProperty("metastore.s3.bucketPath");
-    String region = properties.getProperty("metastore.s3.region");
-    String awsRoleArn = properties.getProperty("metastore.s3.awsRoleArn");
-    String accessKey = properties.getProperty("metastore.s3.accessKey");
-    String secretKey = properties.getProperty("metastore.s3.secretKey");
-    String sessionToken = properties.getProperty("metastore.s3.sessionToken");
-
-    if (bucketPath == null || awsRoleArn == null) {
-      return Optional.empty();
+  public S3StorageConfig getUcMasterRoleS3Configuration() {
+    String bucketPath = properties.getProperty("s3.bucketPath.ucMasterRole");
+    String region = properties.getProperty("s3.region.ucMasterRole");
+    String awsRoleArn = properties.getProperty("s3.awsRoleArn.ucMasterRole");
+    String accessKey = properties.getProperty("s3.accessKey.ucMasterRole");
+    String secretKey = properties.getProperty("s3.secretKey.ucMasterRole");
+    String sessionToken = properties.getProperty("s3.sessionToken.ucMasterRole");
+    if ((bucketPath == null || region == null || awsRoleArn == null)
+        && (accessKey == null || secretKey == null || sessionToken == null)) {
+      return null;
     }
-
-    return Optional.of(
-        S3StorageConfig.builder()
-            .bucketPath(bucketPath)
-            .region(region)
-            .awsRoleArn(awsRoleArn)
-            .accessKey(accessKey)
-            .secretKey(secretKey)
-            .sessionToken(sessionToken)
-            .build());
+    return S3StorageConfig.builder()
+        .bucketPath(bucketPath)
+        .region(region)
+        .awsRoleArn(awsRoleArn)
+        .accessKey(accessKey)
+        .secretKey(secretKey)
+        .sessionToken(sessionToken)
+        .build();
   }
 
-  public Optional<ADLSStorageConfig> getMetastoreAdlsConfig() {
-    String storageAccountName = properties.getProperty("metastore.adls.storageAccountName");
-    String containerName = properties.getProperty("metastore.adls.containerName");
-    String tenantId = properties.getProperty("metastore.adls.tenantId");
-    String clientId = properties.getProperty("metastore.adls.clientId");
-    String clientSecret = properties.getProperty("metastore.adls.clientSecret");
-    String testMode = properties.getProperty("metastore.adls.testMode");
-
-    if (storageAccountName == null
-        || tenantId == null
-        || clientId == null
-        || clientSecret == null) {
-      return Optional.empty();
+  public Map<String, String> getGcsConfigurations() {
+    Map<String, String> gcsConfigMap = new HashMap<>();
+    int i = 0;
+    while (true) {
+      String bucketPath = properties.getProperty("gcs.bucketPath." + i);
+      String jsonKeyFilePath = properties.getProperty("gcs.jsonKeyFilePath." + i);
+      if (bucketPath == null || jsonKeyFilePath == null) {
+        break;
+      }
+      gcsConfigMap.put(bucketPath, jsonKeyFilePath);
+      i++;
     }
 
-    return Optional.of(
-        ADLSStorageConfig.builder()
-            .storageAccountName(storageAccountName)
-            .containerName(containerName)
-            .tenantId(tenantId)
-            .clientId(clientId)
-            .clientSecret(clientSecret)
-            .testMode(testMode != null && testMode.equalsIgnoreCase("true"))
-            .build());
+    return gcsConfigMap;
   }
 
-  public Optional<GCSStorageConfig> getMetastoreGcsConfig() {
-    String bucketPath = properties.getProperty("metastore.gcs.bucketPath");
-    String jsonKeyFilePath = properties.getProperty("metastore.gcs.jsonKeyFilePath");
+  public Map<String, ADLSStorageConfig> getAdlsConfigurations() {
+    Map<String, ADLSStorageConfig> adlsConfigMap = new HashMap<>();
 
-    if (bucketPath == null || jsonKeyFilePath == null) {
-      return Optional.empty();
+    int i = 0;
+    while (true) {
+      String storageAccountName = properties.getProperty("adls.storageAccountName." + i);
+      String tenantId = properties.getProperty("adls.tenantId." + i);
+      String clientId = properties.getProperty("adls.clientId." + i);
+      String clientSecret = properties.getProperty("adls.clientSecret." + i);
+      String testMode = properties.getProperty("adls.testMode." + i);
+      if (storageAccountName == null
+          || tenantId == null
+          || clientId == null
+          || clientSecret == null) {
+        break;
+      }
+      adlsConfigMap.put(
+          storageAccountName,
+          ADLSStorageConfig.builder()
+              .storageAccountName(storageAccountName)
+              .tenantId(tenantId)
+              .clientId(clientId)
+              .clientSecret(clientSecret)
+              .testMode(testMode != null && testMode.equalsIgnoreCase("true"))
+              .build());
+      i++;
     }
 
-    return Optional.of(
-        GCSStorageConfig.builder()
-            .bucketPath(bucketPath)
-            .serviceAccountKeyJsonFilePath(jsonKeyFilePath)
-            .build());
+    return adlsConfigMap;
   }
 
   /**
@@ -149,12 +151,7 @@ public class ServerProperties {
   }
 
   public boolean isAuthorizationEnabled() {
-    String authorization = properties.getProperty("server.authorization", "disable");
+    String authorization = getProperty("server.authorization", "disable");
     return authorization.equalsIgnoreCase("enable");
-  }
-
-  public Environment getEnvironment() {
-    String env = properties.getProperty("server.env", "test");
-    return Environment.valueOf(env.toUpperCase());
   }
 }

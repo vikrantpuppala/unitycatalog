@@ -2,75 +2,65 @@ package io.unitycatalog.server.service.credential.gcp;
 
 import static java.lang.String.format;
 
-import com.google.auth.oauth2.*;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.CredentialAccessBoundary;
+import com.google.auth.oauth2.DownscopedCredentials;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.OAuth2Credentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.base.CharMatcher;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
-import io.unitycatalog.server.model.StorageCredentialInfo;
 import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.utils.ServerProperties;
 import java.io.IOException;
 import java.net.URI;
+import java.sql.Date;
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 import lombok.SneakyThrows;
 import org.apache.iceberg.Files;
 
 public class GcpCredentialVendor {
+
   public static final List<String> INITIAL_SCOPES =
       List.of("https://www.googleapis.com/auth/cloud-platform");
 
-  private final ServerProperties serverProperties;
+  private final Map<String, String> gcsConfigurations;
 
   public GcpCredentialVendor(ServerProperties serverProperties) {
-    this.serverProperties = serverProperties;
+    this.gcsConfigurations = serverProperties.getGcsConfigurations();
   }
 
   @SneakyThrows
-  public AccessToken vendGcpToken(
-      CredentialContext credentialContext,
-      Optional<StorageCredentialInfo> optionalStorageCredential) {
-    if (serverProperties.getEnvironment().equals(ServerProperties.Environment.TEST)) {
-      return new AccessToken("test-gcp-token", null);
-    }
-    //    String serviceAccountKeyJsonFilePath =
-    // metastoreGcsConfig.getServiceAccountKeyJsonFilePath();
-    //
-    //    if (serviceAccountKeyJsonFilePath != null
-    //        && serviceAccountKeyJsonFilePath.startsWith("testing://")) {
-    //      // allow pass-through of a dummy value for integration testing
-    //      return AccessToken.newBuilder()
-    //          .setTokenValue(serviceAccountKeyJsonFilePath)
-    //          .setExpirationTime(Date.from(Instant.ofEpochMilli(253370790000000L)))
-    //          .build();
-    //    }
+  public AccessToken vendGcpToken(CredentialContext credentialContext) {
+    String serviceAccountKeyJsonFilePath =
+        gcsConfigurations.get(credentialContext.getStorageBase());
 
-    // FIXME!! This is not correct. We need to downscope the token based on the context not the
-    // metastore credentials,
-    //  however, it is still unclear how to model google credentials
-    //    return downscopeGcpCreds(
-    //            metastoreGoogleCredentials.createScoped(INITIAL_SCOPES), credentialContext)
-    //        .refreshAccessToken();
-    return new AccessToken("token", Date.from(Instant.ofEpochMilli(253370790000000L)));
-  }
-
-  @SneakyThrows
-  private static GoogleCredentials getGoogleCredentials(GCSStorageConfig metastoreGcsConfig) {
-    String serviceAccountKeyJsonFilePath = metastoreGcsConfig.getServiceAccountKeyJsonFilePath();
-
+    GoogleCredentials creds;
     if (serviceAccountKeyJsonFilePath != null && !serviceAccountKeyJsonFilePath.isEmpty()) {
-      return ServiceAccountCredentials.fromStream(
-          Files.localInput(serviceAccountKeyJsonFilePath).newStream());
+      if (serviceAccountKeyJsonFilePath.startsWith("testing://")) {
+        // allow pass-through of a dummy value for integration testing
+        return AccessToken.newBuilder()
+            .setTokenValue(serviceAccountKeyJsonFilePath)
+            .setExpirationTime(Date.from(Instant.ofEpochMilli(253370790000000L)))
+            .build();
+      }
+      creds =
+          ServiceAccountCredentials.fromStream(
+              Files.localInput(serviceAccountKeyJsonFilePath).newStream());
     } else {
       try {
-        return GoogleCredentials.getApplicationDefault();
+        creds = GoogleCredentials.getApplicationDefault();
       } catch (IOException e) {
         throw new BaseException(ErrorCode.FAILED_PRECONDITION, "GCS credentials not found.", e);
       }
     }
+
+    return downscopeGcpCreds(creds.createScoped(INITIAL_SCOPES), credentialContext)
+        .refreshAccessToken();
   }
 
   private static OAuth2Credentials downscopeGcpCreds(

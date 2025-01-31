@@ -1,7 +1,8 @@
 package io.unitycatalog.server.base;
 
 import io.unitycatalog.server.UnityCatalogServer;
-import io.unitycatalog.server.persist.utils.HibernateUtils;
+import io.unitycatalog.server.persist.utils.HibernateConfigurator;
+import io.unitycatalog.server.utils.ServerProperties;
 import io.unitycatalog.server.utils.TestUtils;
 import java.util.Properties;
 import org.hibernate.Session;
@@ -14,7 +15,13 @@ public abstract class BaseServerTest {
 
   public static ServerConfig serverConfig = new ServerConfig("http://localhost", "");
   protected static UnityCatalogServer unityCatalogServer;
-  protected static Properties initProperties = new Properties();
+  protected static Properties serverProperties;
+  protected static HibernateConfigurator hibernateConfigurator;
+
+  protected void setUpProperties() {
+    serverProperties = new Properties();
+    serverProperties.setProperty("server.env", "test");
+  }
 
   @BeforeEach
   public void setUp() {
@@ -31,8 +38,15 @@ public abstract class BaseServerTest {
       System.out.println("Running tests on localhost..");
       // start the server on a random port
       int port = TestUtils.getRandomPort();
-      initProperties.put("server.env", "test");
-      unityCatalogServer = new UnityCatalogServer(port, initProperties);
+      setUpProperties();
+      ServerProperties initServerProperties = new ServerProperties(serverProperties);
+      hibernateConfigurator = new HibernateConfigurator(TestUtils.getTestHibernateProperties());
+      unityCatalogServer =
+          UnityCatalogServer.builder()
+              .port(port)
+              .serverProperties(initServerProperties)
+              .hibernateConfigurator(hibernateConfigurator)
+              .build();
       unityCatalogServer.start();
       serverConfig.setServerUrl("http://localhost:" + port);
     }
@@ -43,7 +57,7 @@ public abstract class BaseServerTest {
     if (unityCatalogServer != null) {
 
       // TODO: Figure out a better way to clear the database
-      SessionFactory sessionFactory = HibernateUtils.getSessionFactory();
+      SessionFactory sessionFactory = hibernateConfigurator.getSessionFactory();
       Session session = sessionFactory.openSession();
       Transaction tx = session.beginTransaction();
       session.createMutationQuery("delete from FunctionParameterInfoDAO").executeUpdate();
