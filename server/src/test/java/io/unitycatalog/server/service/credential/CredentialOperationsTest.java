@@ -44,7 +44,7 @@ public class CredentialOperationsTest {
                     .secretKey(SECRET_KEY)
                     .sessionToken(SESSION_TOKEN)
                     .build()));
-    AwsCredentialVendor awsCredentialVendor = new AwsCredentialVendor(serverProperties);
+    AwsCredentialVendor awsCredentialVendor = new AwsCredentialVendor(serverProperties, null);
     credentialsOperations = new CredentialOperations(awsCredentialVendor, null, null);
     TemporaryCredentials s3TemporaryCredentials =
         credentialsOperations.vendCredential(
@@ -67,7 +67,7 @@ public class CredentialOperationsTest {
                     .region(S3_REGION)
                     .awsRoleArn(ROLE_ARN)
                     .build()));
-    awsCredentialVendor = new AwsCredentialVendor(serverProperties);
+    awsCredentialVendor = new AwsCredentialVendor(serverProperties, null);
     credentialsOperations = new CredentialOperations(awsCredentialVendor, null, null);
     assertThatThrownBy(
             () ->

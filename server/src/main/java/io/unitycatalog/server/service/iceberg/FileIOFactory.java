@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.utils.Constants.URI_SCHEME_ABFS;
@@ -84,10 +85,9 @@ public class FileIOFactory {
 
   protected S3FileIO getS3FileIO(URI tableLocationUri) {
     CredentialContext context = getCredentialContextFromTableLocation(tableLocationUri);
-    S3StorageConfig s3StorageConfig = s3Configurations.get(context.getStorageBase());
 
     S3FileIO s3FileIO =
-        new S3FileIO(() -> getS3Client(getAwsCredentialsProvider(context), s3StorageConfig.getRegion()));
+        new S3FileIO(() -> getS3Client(getAwsCredentialsProvider(context), "")); // FIXME!! region is empty for now
 
     s3FileIO.initialize(Map.of());
 

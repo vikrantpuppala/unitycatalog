@@ -2,11 +2,6 @@ package io.unitycatalog.server.utils;
 
 import io.unitycatalog.server.service.credential.aws.S3StorageConfig;
 import io.unitycatalog.server.service.credential.azure.ADLSStorageConfig;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -23,26 +18,11 @@ public class ServerProperties {
   }
 
   public ServerProperties(String propertiesFile) {
-    this(readPropertiesFromFile(propertiesFile));
+    this(PropertyUtils.readPropertiesFromFile(propertiesFile));
   }
 
   public ServerProperties(Properties properties) {
     this.properties = properties;
-  }
-
-  // Load properties from a configuration file
-  private static Properties readPropertiesFromFile(String propertiesFile) {
-    Path path = Paths.get(propertiesFile);
-    Properties propertiesFromFile = new Properties();
-    if (path.toFile().exists()) {
-      try (InputStream input = Files.newInputStream(path)) {
-        propertiesFromFile.load(input);
-        LOGGER.debug("Server properties loaded successfully: {}", path);
-      } catch (IOException ex) {
-        LOGGER.error("Exception during loading properties", ex);
-      }
-    }
-    return propertiesFromFile;
   }
 
   public Map<String, S3StorageConfig> getS3Configurations() {
@@ -73,6 +53,27 @@ public class ServerProperties {
     }
 
     return s3BucketConfigMap;
+  }
+
+  public S3StorageConfig getUcMasterRoleS3Configuration() {
+    String bucketPath = properties.getProperty("s3.bucketPath.ucMasterRole");
+    String region = properties.getProperty("s3.region.ucMasterRole");
+    String awsRoleArn = properties.getProperty("s3.awsRoleArn.ucMasterRole");
+    String accessKey = properties.getProperty("s3.accessKey.ucMasterRole");
+    String secretKey = properties.getProperty("s3.secretKey.ucMasterRole");
+    String sessionToken = properties.getProperty("s3.sessionToken.ucMasterRole");
+    if ((bucketPath == null || region == null || awsRoleArn == null)
+        && (accessKey == null || secretKey == null || sessionToken == null)) {
+      return null;
+    }
+    return S3StorageConfig.builder()
+        .bucketPath(bucketPath)
+        .region(region)
+        .awsRoleArn(awsRoleArn)
+        .accessKey(accessKey)
+        .secretKey(secretKey)
+        .sessionToken(sessionToken)
+        .build();
   }
 
   public Map<String, String> getGcsConfigurations() {

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.unitycatalog.server.persist.model.Privileges;
 import io.unitycatalog.server.persist.utils.HibernateConfigurator;
-import io.unitycatalog.server.utils.ServerProperties;
+import io.unitycatalog.server.utils.TestUtils;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,10 +14,8 @@ public class JCasbinAuthorizerTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    Properties properties = new Properties();
-    properties.setProperty("server.env", "test");
-    ServerProperties serverProperties = new ServerProperties(properties);
-    HibernateConfigurator hibernateConfigurator = new HibernateConfigurator(serverProperties);
+    HibernateConfigurator hibernateConfigurator =
+        new HibernateConfigurator(TestUtils.getTestHibernateProperties());
     authenticator = new JCasbinAuthorizer(hibernateConfigurator);
   }
 
