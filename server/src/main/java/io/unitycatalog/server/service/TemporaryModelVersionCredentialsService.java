@@ -19,7 +19,6 @@ import io.unitycatalog.server.service.credential.CredentialContext;
 import lombok.SneakyThrows;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.model.SecurableType.CATALOG;
@@ -75,7 +74,7 @@ public class TemporaryModelVersionCredentialsService {
         return HttpResponse.ofJson(
                 credentialOps.vendCredential(
                         modelVersionInfo.getStorageLocation(),
-                        modelVersionOperationToPrivileges(requestedOperation), Optional.empty()));
+                        modelVersionOperationToPrivileges(requestedOperation)));
     }
 
     private Set<CredentialContext.Privilege> modelVersionOperationToPrivileges(

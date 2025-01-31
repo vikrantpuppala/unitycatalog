@@ -22,7 +22,6 @@ import lombok.SneakyThrows;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.model.SecurableType.METASTORE;
@@ -60,7 +59,7 @@ public class TemporaryVolumeCredentialsService {
     return HttpResponse.ofJson(
             credentialOps.vendCredential(
                     volumeInfo.getStorageLocation(),
-                    volumeOperationToPrivileges(generateTemporaryVolumeCredential.getOperation()), Optional.empty()));
+                    volumeOperationToPrivileges(generateTemporaryVolumeCredential.getOperation())));
   }
 
   private Set<CredentialContext.Privilege> volumeOperationToPrivileges(VolumeOperation volumeOperation) {

@@ -12,7 +12,6 @@ import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.service.credential.CredentialOperations;
 
 import java.util.Collections;
-import java.util.Optional;
 import java.util.Set;
 
 import static io.unitycatalog.server.model.SecurableType.METASTORE;
@@ -35,7 +34,7 @@ public class TemporaryPathCredentialsService {
         return HttpResponse.ofJson(
                 credentialOps.vendCredential(
                         generateTemporaryPathCredential.getUrl(),
-                        pathOperationToPrivileges(generateTemporaryPathCredential.getOperation()), Optional.empty()));
+                        pathOperationToPrivileges(generateTemporaryPathCredential.getOperation())));
     }
 
     private Set<CredentialContext.Privilege> pathOperationToPrivileges(PathOperation pathOperation) {

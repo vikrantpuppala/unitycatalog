@@ -59,9 +59,6 @@ public class TableInfoDAO extends IdentifiableDAO {
   @Column(name = "column_count")
   private Integer columnCount;
 
-  @Column(name = "storage_credential_id")
-  private UUID storageCredentialId;
-
   @OneToMany(
       mappedBy = "table",
       cascade = CascadeType.ALL,

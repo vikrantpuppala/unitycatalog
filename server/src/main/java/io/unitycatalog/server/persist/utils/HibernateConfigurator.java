@@ -67,16 +67,4 @@ public class HibernateConfigurator {
       throw new RuntimeException("Exception during creation of SessionFactory", e);
     }
   }
-
-  //  public static Properties setupHibernateProperties(ServerProperties serverProperties) {
-  //    // TODO: use dependency injection for test hibernate properties
-  //    if ("test".equals(serverProperties.getProperty("server.env"))) {
-  //      hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
-  //      hibernateProperties.setProperty(
-  //          "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
-  //      hibernateProperties.setProperty("hibernate.hbm2ddl.auto", "create-drop");
-  //      LOGGER.debug("Hibernate configuration set for testing");
-  //    }
-  //    return hibernateProperties;
-  //  }
 }

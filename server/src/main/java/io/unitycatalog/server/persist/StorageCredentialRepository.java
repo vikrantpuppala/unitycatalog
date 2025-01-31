@@ -34,9 +34,10 @@ public class StorageCredentialRepository {
   }
 
   public StorageCredentialInfo addStorageCredential(
-      CreateStorageCredential createStorageCredential, String callerId) {
+      CreateStorageCredential createStorageCredential) {
     ValidationUtils.validateSqlObjectName(createStorageCredential.getName());
     UUID storageCredentialId = UUID.randomUUID();
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
     StorageCredentialInfo storageCredentialInfo =
         new StorageCredentialInfo()
             .id(storageCredentialId.toString())
@@ -233,8 +234,7 @@ public class StorageCredentialRepository {
                 .createQuery(
                     "SELECT el FROM ExternalLocationDAO el " + "WHERE el.url IN :parentPaths",
                     ExternalLocationInfo.class)
-                .setParameter(
-                    "parentPaths", FileOperations.getParentPathsList(context.getStorageBase()))
+                .setParameter("parentPaths", FileOperations.getParentPathsList(context.getUri()))
                 .getResultList();
         if (results.isEmpty()) {
           return Optional.empty();
