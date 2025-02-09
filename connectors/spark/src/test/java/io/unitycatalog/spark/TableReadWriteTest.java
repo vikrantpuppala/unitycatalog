@@ -491,8 +491,6 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
     switch (scheme) {
       case "s3":
         createStorageCredential.setAwsIamRole(new AwsIamRoleRequest().roleArn("test"));
-      case "gs":
-        createStorageCredential.setDatabricksGcpServiceAccount(null);
       case "abfs":
         createStorageCredential.setAzureServicePrincipal(new AzureServicePrincipal().directoryId("test").clientSecret("test").applicationId("test"));
     }
