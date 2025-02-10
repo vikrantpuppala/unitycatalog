@@ -8,6 +8,7 @@ import io.unitycatalog.server.persist.dao.SchemaInfoDAO;
 import io.unitycatalog.server.persist.dao.VolumeInfoDAO;
 import io.unitycatalog.server.persist.utils.FileOperations;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.persist.utils.PathUtils;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
@@ -67,6 +68,8 @@ public class VolumeRepository {
     VolumeInfoDAO volumeInfoDAO = VolumeInfoDAO.from(volumeInfo);
     try (Session session = sessionFactory.openSession()) {
       Transaction tx = session.beginTransaction();
+      PathUtils.checkExternalStorageLocationForConflicts(
+          session, createVolumeRequest.getStorageLocation());
       try {
         SchemaInfoDAO schemaInfoDAO =
             repositories

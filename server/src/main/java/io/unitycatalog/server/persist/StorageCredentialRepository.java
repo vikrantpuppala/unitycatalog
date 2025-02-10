@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
+import io.unitycatalog.server.persist.dao.ExternalLocationDAO;
 import io.unitycatalog.server.persist.dao.StorageCredentialDAO;
 import io.unitycatalog.server.persist.utils.FileOperations;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
@@ -229,21 +230,22 @@ public class StorageCredentialRepository {
       session.setDefaultReadOnly(true);
       Transaction tx = session.beginTransaction();
       try {
-        List<ExternalLocationInfo> results =
+        List<ExternalLocationDAO> results =
             session
                 .createQuery(
                     "SELECT el FROM ExternalLocationDAO el " + "WHERE el.url IN :parentPaths",
-                    ExternalLocationInfo.class)
+                    ExternalLocationDAO.class)
                 .setParameter("parentPaths", FileOperations.getParentPathsList(context.getUri()))
                 .getResultList();
         if (results.isEmpty()) {
           return Optional.empty();
         }
-        ExternalLocationInfo externalLocationToUse = results.get(0);
+        ExternalLocationDAO externalLocationToUse = results.get(0);
         StorageCredentialDAO storageCredentialDAO =
             repositories
                 .getStorageCredentialRepository()
-                .getStorageCredentialDAO(session, externalLocationToUse.getCredentialId());
+                .getStorageCredentialDAO(
+                    session, externalLocationToUse.getCredentialId().toString());
         if (storageCredentialDAO == null) {
           return Optional.empty();
         }
