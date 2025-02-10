@@ -9,6 +9,7 @@ import io.unitycatalog.server.model.UpdateExternalLocation;
 import io.unitycatalog.server.persist.dao.ExternalLocationDAO;
 import io.unitycatalog.server.persist.dao.StorageCredentialDAO;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.persist.utils.PathUtils;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
@@ -36,6 +37,8 @@ public class ExternalLocationRepository {
     String callerId = IdentityUtils.findPrincipalEmailAddress();
 
     try (Session session = sessionFactory.openSession()) {
+      Transaction tx = session.beginTransaction();
+      PathUtils.checkExternalLocationForConflicts(session, createExternalLocation.getUrl());
       StorageCredentialDAO storageCredentialDAO =
           repositories
               .getStorageCredentialRepository()
@@ -57,7 +60,6 @@ public class ExternalLocationRepository {
               .createdAt(new Date())
               .createdBy(callerId)
               .build();
-      Transaction tx = session.beginTransaction();
       try {
         if (getExternalLocationDAO(session, createExternalLocation.getName()) != null) {
           throw new BaseException(
@@ -136,6 +138,8 @@ public class ExternalLocationRepository {
 
     try (Session session = sessionFactory.openSession()) {
       Transaction tx = session.beginTransaction();
+      PathUtils.checkExternalLocationForConflicts(session, updateExternalLocation.getUrl());
+
       try {
         ExternalLocationDAO existingLocation = getExternalLocationDAO(session, name);
         if (existingLocation == null) {

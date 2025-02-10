@@ -30,9 +30,6 @@ public abstract class BaseTemporaryPathCredentialTest extends BaseCRUDTest {
   @BeforeEach
   @Override
   public void setUp() {
-    initProperties.put("metastore.s3.bucketPath", "s3://uc/test");
-    initProperties.put(
-        "metastore.s3.awsRoleArn", "arn:aws:iam::123456789012:role/unitycatalog-role");
     super.setUp();
     credentialOperations = createTemporaryCredentialsOperations(serverConfig);
     externalLocationOperations = createExternalLocationOperations(serverConfig);

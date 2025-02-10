@@ -9,6 +9,7 @@ import io.unitycatalog.server.persist.dao.SchemaInfoDAO;
 import io.unitycatalog.server.persist.dao.TableInfoDAO;
 import io.unitycatalog.server.persist.utils.FileOperations;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.persist.utils.PathUtils;
 import io.unitycatalog.server.persist.utils.RepositoryUtils;
 import io.unitycatalog.server.utils.Constants;
 import io.unitycatalog.server.utils.IdentityUtils;
@@ -152,6 +153,7 @@ public class TableRepository {
       String schemaName = tableInfo.getSchemaName();
       UUID schemaId = getSchemaId(session, catalogName, schemaName);
       tx = session.beginTransaction();
+      PathUtils.checkExternalStorageLocationForConflicts(session, createTable.getStorageLocation());
 
       try {
         // Check if table already exists

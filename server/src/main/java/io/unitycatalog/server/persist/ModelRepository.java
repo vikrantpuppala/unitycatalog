@@ -7,10 +7,7 @@ import io.unitycatalog.server.persist.dao.CatalogInfoDAO;
 import io.unitycatalog.server.persist.dao.ModelVersionInfoDAO;
 import io.unitycatalog.server.persist.dao.RegisteredModelInfoDAO;
 import io.unitycatalog.server.persist.dao.SchemaInfoDAO;
-import io.unitycatalog.server.persist.utils.FileOperations;
-import io.unitycatalog.server.persist.utils.PagedListingHelper;
-import io.unitycatalog.server.persist.utils.RepositoryUtils;
-import io.unitycatalog.server.persist.utils.UriUtils;
+import io.unitycatalog.server.persist.utils.*;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.util.*;
@@ -203,6 +200,7 @@ public class ModelRepository {
       String storageLocation =
           fileOperations.getModelStorageLocation(
               catalogId.toString(), schemaId.toString(), modelId);
+      PathUtils.checkExternalStorageLocationForConflicts(session, storageLocation);
       try {
         // Check if registered model already exists
         RegisteredModelInfoDAO existingRegisteredModel =
