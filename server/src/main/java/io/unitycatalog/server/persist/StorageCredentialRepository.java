@@ -6,8 +6,8 @@ import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.persist.dao.StorageCredentialDAO;
-import io.unitycatalog.server.persist.utils.FileOperations;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.persist.utils.PathUtils;
 import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
@@ -234,7 +234,7 @@ public class StorageCredentialRepository {
                 .createQuery(
                     "SELECT el FROM ExternalLocationDAO el " + "WHERE el.url IN :parentPaths",
                     ExternalLocationInfo.class)
-                .setParameter("parentPaths", FileOperations.getParentPathsList(context.getUri()))
+                .setParameter("parentPaths", PathUtils.getParentPathsList(context.getUri()))
                 .getResultList();
         if (results.isEmpty()) {
           return Optional.empty();

@@ -489,8 +489,7 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
     switch (scheme) {
       case "s3":
         createStorageCredential.setAwsIamRole(new AwsIamRoleRequest().roleArn("test"));
-      case "abfs":
-        createStorageCredential.setAzureServicePrincipal(new AzureServicePrincipal().directoryId("test").clientSecret("test").applicationId("test"));
+        break;
     }
     storageCredentialOperations.createStorageCredential(createStorageCredential);
     CreateExternalLocation createExternalLocation =
