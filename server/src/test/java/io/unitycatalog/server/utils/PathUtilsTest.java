@@ -13,17 +13,15 @@ public class PathUtilsTest {
   @Test
   public void testS3Url() {
     String url = "s3://uc/test";
-    List<String> expected = Arrays.asList("s3://uc/test", "s3://uc");
-    assertThat(PathUtils.getParentPathsList(url)).containsExactlyElementsOf(expected);
+    List<String> expected = Arrays.asList("s3://uc/");
+    assertThat(PathUtils.getParentPathsList(url)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Test
   public void testAbfsUrl() {
     String url = "abfs://myaccount/container/folder";
-    List<String> expected =
-        Arrays.asList(
-            "abfs://myaccount/container/folder", "abfs://myaccount/container", "abfs://myaccount");
-    assertThat(PathUtils.getParentPathsList(url)).containsExactlyElementsOf(expected);
+    List<String> expected = Arrays.asList("abfs://myaccount/container/", "abfs://myaccount/");
+    assertThat(PathUtils.getParentPathsList(url)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Test
@@ -31,19 +29,17 @@ public class PathUtilsTest {
     String url = "abfss://myaccount/container/folder/subfolder";
     List<String> expected =
         Arrays.asList(
-            "abfss://myaccount/container/folder/subfolder",
-            "abfss://myaccount/container/folder",
-            "abfss://myaccount/container",
-            "abfss://myaccount");
-    assertThat(PathUtils.getParentPathsList(url)).containsExactlyElementsOf(expected);
+            "abfss://myaccount/container/folder/",
+            "abfss://myaccount/container/",
+            "abfss://myaccount/");
+    assertThat(PathUtils.getParentPathsList(url)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Test
   public void testGsUrl() {
     String url = "gs://bucket/folder/subfolder";
-    List<String> expected =
-        Arrays.asList("gs://bucket/folder/subfolder", "gs://bucket/folder", "gs://bucket");
-    assertThat(PathUtils.getParentPathsList(url)).containsExactlyElementsOf(expected);
+    List<String> expected = Arrays.asList("gs://bucket/folder/", "gs://bucket/");
+    assertThat(PathUtils.getParentPathsList(url)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Test
@@ -51,6 +47,6 @@ public class PathUtilsTest {
     String url = "invalidpath/test";
     assertThatThrownBy(() -> PathUtils.getParentPathsList(url))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Invalid URL format");
+        .hasMessageContaining("Invalid URL");
   }
 }

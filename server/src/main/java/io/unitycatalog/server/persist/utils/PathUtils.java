@@ -39,6 +39,7 @@ public class PathUtils {
     // Construct parent paths iteratively
     StringBuilder parentPath =
         new StringBuilder(scheme + parts[0]); // Preserve scheme and bucket/container
+    parentPaths.add(parentPath + "/"); // Ensure trailing slash for directories
     for (int i = 1; i < parts.length - 1; i++) {
       parentPath.append("/").append(parts[i]);
       parentPaths.add(parentPath + "/"); // Ensure trailing slash for directories
