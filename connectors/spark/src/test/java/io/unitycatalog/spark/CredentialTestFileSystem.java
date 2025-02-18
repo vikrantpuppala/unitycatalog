@@ -6,7 +6,7 @@ import org.apache.hadoop.util.Progressable;
 
 // A wrapper over the local file system to test UC table credentials.
 public abstract class CredentialTestFileSystem extends RawLocalFileSystem {
-  public static boolean credentialCheckEnabled = false;
+  public static boolean credentialCheckEnabled = true;
 
   abstract String scheme();
 

@@ -213,24 +213,4 @@ public class FileOperations {
     String scheme = URI.create(url).getScheme();
     return scheme != null && Constants.SUPPORTED_SCHEMES.contains(scheme);
   }
-
-  public static List<String> getParentPathsList(String url) {
-    List<String> parentPaths = new ArrayList<>();
-    Path path = Paths.get(url);
-
-    while (path != null) {
-      path = path.getParent();
-      if (path != null) {
-        try {
-          String normalizedPath = path.toString().replaceAll("/$", ""); // Strip trailing slash
-          parentPaths.add(normalizedPath);
-        } catch (Exception e) {
-          // Ignore invalid paths
-          LOGGER.error("Failed to get parent paths", e);
-        }
-      }
-    }
-
-    return parentPaths;
-  }
 }

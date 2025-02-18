@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-package io.unitycatalog.server.base.tempcredential;
-========
 package io.unitycatalog.server.sdk.tempcredential;
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
 
 import static io.unitycatalog.server.utils.TestUtils.*;
 import static io.unitycatalog.server.utils.TestUtils.MODEL_NAME;
@@ -37,13 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-public abstract class BaseTemporaryModelVersionCredentialTest extends BaseCRUDTest {
-
-  protected SchemaOperations schemaOperations;
-  protected ModelOperations modelOperations;
-  protected TemporaryCredentialOperations credentialOperations;
-========
 public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMockCredentials {
   private SchemaOperations schemaOperations;
   private ModelOperations modelOperations;
@@ -53,7 +42,6 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
   protected CatalogOperations createCatalogOperations(ServerConfig config) {
     return new SdkCatalogOperations(TestUtils.createApiClient(config));
   }
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
 
   protected SchemaOperations createSchemaOperations(ServerConfig config) {
     return new SdkSchemaOperations(TestUtils.createApiClient(config));
@@ -63,10 +51,6 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
     return new SdkModelOperations(TestUtils.createApiClient(config));
   }
 
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-  protected abstract TemporaryCredentialOperations createTemporaryCredentialsOperations(
-      ServerConfig serverConfig);
-========
   String rootBase = "/tmp/" + UUID.randomUUID();
 
   @Override
@@ -74,7 +58,6 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
     super.setUpProperties();
     serverProperties.setProperty(Property.MODEL_STORAGE_ROOT.getKey(), rootBase);
   }
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
 
   @BeforeEach
   @Override
@@ -82,9 +65,6 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
     super.setUp();
     schemaOperations = createSchemaOperations(serverConfig);
     modelOperations = createModelOperations(serverConfig);
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-    credentialOperations = createTemporaryCredentialsOperations(serverConfig);
-========
     temporaryCredentialsApi = new TemporaryCredentialsApi(TestUtils.createApiClient(serverConfig));
   }
 
@@ -96,7 +76,6 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
     } catch (Exception e) {
       // Ignore
     }
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
   }
 
   protected void createNonFileModelVersion(
@@ -208,12 +187,8 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
             .operation(ModelVersionOperation.READ_WRITE_MODEL_VERSION);
 
     assertThatThrownBy(
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-            () -> credentialOperations.generateTemporaryModelVersionCredentials(generateFileCreds))
-========
             () ->
                 temporaryCredentialsApi.generateTemporaryModelVersionCredentials(generateFileCreds))
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
 
@@ -228,11 +203,7 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
 
     assertThatThrownBy(
             () ->
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-                credentialOperations.generateTemporaryModelVersionCredentials(
-========
                 temporaryCredentialsApi.generateTemporaryModelVersionCredentials(
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
                     generateCloudFailedCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
@@ -248,11 +219,7 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
 
     assertThatThrownBy(
             () ->
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-                credentialOperations.generateTemporaryModelVersionCredentials(
-========
                 temporaryCredentialsApi.generateTemporaryModelVersionCredentials(
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
                     generateCloudUnknownCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
@@ -268,11 +235,7 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
 
     assertThatThrownBy(
             () ->
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-                credentialOperations.generateTemporaryModelVersionCredentials(
-========
                 temporaryCredentialsApi.generateTemporaryModelVersionCredentials(
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
                     generateCloudReadyCreds))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
@@ -288,11 +251,7 @@ public class SdkTemporaryModelVersionCredentialTest extends BaseCRUDTestWithMock
 
     assertThatThrownBy(
             () ->
-<<<<<<<< HEAD:server/src/test/java/io/unitycatalog/server/base/tempcredential/BaseTemporaryModelVersionCredentialTest.java
-                credentialOperations.generateTemporaryModelVersionCredentials(
-========
                 temporaryCredentialsApi.generateTemporaryModelVersionCredentials(
->>>>>>>> refs/heads/scel/4-service:server/src/test/java/io/unitycatalog/server/sdk/tempcredential/SdkTemporaryModelVersionCredentialTest.java
                     generateUnknownOperation))
         .isInstanceOf(ApiException.class)
         .hasFieldOrPropertyWithValue("code", ErrorCode.INVALID_ARGUMENT.getHttpStatus().code());
