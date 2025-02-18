@@ -18,9 +18,9 @@ public class EntityConflictChecker<T extends IdentifiableDAO> {
 
   public EntityConflictChecker(Class<T> entityClass) {
     this.entityClass = entityClass;
-    if (TableInfoDAO.class.equals(entityClass) ||
-            ExternalLocationDAO.class.equals(entityClass) ||
-            RegisteredModelInfoDAO.class.equals(entityClass)) {
+    if (TableInfoDAO.class.equals(entityClass)
+        || ExternalLocationDAO.class.equals(entityClass)
+        || RegisteredModelInfoDAO.class.equals(entityClass)) {
       this.locationColumnName = "url";
     } else if (VolumeInfoDAO.class.equals(entityClass)) {
       this.locationColumnName = "storageLocation";
@@ -63,7 +63,12 @@ public class EntityConflictChecker<T extends IdentifiableDAO> {
             entity -> {
               throw new BaseException(
                   ErrorCode.FAILED_PRECONDITION,
-                  "Provided path: " + url + " overlaps with " + entityClass.getSimpleName() + " " + entity.getName());
+                  "Provided path: "
+                      + url
+                      + " overlaps with "
+                      + entityClass.getSimpleName()
+                      + " "
+                      + entity.getName());
             });
   }
 
@@ -99,7 +104,7 @@ public class EntityConflictChecker<T extends IdentifiableDAO> {
       predicates.add(cb.equal(root.get(locationColumnName), url));
     }
     if (cannotBeUnderExternalLocations) {
-      List<String> parentPaths = FileOperations.getParentPathsList(url);
+      List<String> parentPaths = PathUtils.getParentPathsList(url);
       if (!parentPaths.isEmpty()) {
         predicates.add(root.get(locationColumnName).in(parentPaths));
       }

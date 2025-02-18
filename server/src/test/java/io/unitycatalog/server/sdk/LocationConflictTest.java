@@ -2,7 +2,6 @@ package io.unitycatalog.server.sdk;
 
 import static io.unitycatalog.server.utils.TestUtils.*;
 import static io.unitycatalog.server.utils.TestUtils.CATALOG_NAME;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.unitycatalog.client.ApiException;
@@ -139,7 +138,8 @@ public class LocationConflictTest extends BaseCRUDTest {
   @Test
   public void testExternalLocationCannotBeUnderTableOrVolume() throws ApiException, IOException {
     createCommonResources();
-    CreateTable createTable = new CreateTable()
+    CreateTable createTable =
+        new CreateTable()
             .name(TABLE_NAME)
             .catalogName(CATALOG_NAME)
             .schemaName(SCHEMA_NAME)
@@ -150,17 +150,17 @@ public class LocationConflictTest extends BaseCRUDTest {
 
     // Trying to create a volume under table → Should Fail
     CreateVolumeRequestContent createVolume =
-        new CreateVolumeRequestContent().name(VOLUME_NAME)
-                .catalogName(CATALOG_NAME)
-                .schemaName(SCHEMA_NAME)
-                .volumeType(VolumeType.EXTERNAL)
-                .storageLocation(NESTED_URL);
+        new CreateVolumeRequestContent()
+            .name(VOLUME_NAME)
+            .catalogName(CATALOG_NAME)
+            .schemaName(SCHEMA_NAME)
+            .volumeType(VolumeType.EXTERNAL)
+            .storageLocation(NESTED_URL);
 
-    assertThatThrownBy(
-            () -> volumeOperations.createVolume(createVolume))
-            .isInstanceOf(ApiException.class)
-            .hasFieldOrPropertyWithValue("code", ErrorCode.FAILED_PRECONDITION.getHttpStatus().code())
-            .hasMessageContaining("Provided path: " + NESTED_URL + " overlaps with");
+    assertThatThrownBy(() -> volumeOperations.createVolume(createVolume))
+        .isInstanceOf(ApiException.class)
+        .hasFieldOrPropertyWithValue("code", ErrorCode.FAILED_PRECONDITION.getHttpStatus().code())
+        .hasMessageContaining("Provided path: " + NESTED_URL + " overlaps with");
 
     // Try to create External Location under Table → Should Fail
     CreateExternalLocation externalLocationUnderTable =
@@ -177,16 +177,16 @@ public class LocationConflictTest extends BaseCRUDTest {
 
     // Create External Location on the same level as the Table → Should Succeed
     CreateStorageCredential createStorageCredential =
-            new CreateStorageCredential()
-                    .name(CREDENTIAL_NAME)
-                    .awsIamRole(new AwsIamRoleRequest().roleArn(DUMMY_ROLE_ARN));
+        new CreateStorageCredential()
+            .name(CREDENTIAL_NAME)
+            .awsIamRole(new AwsIamRoleRequest().roleArn(DUMMY_ROLE_ARN));
     storageCredentialOperations.createStorageCredential(createStorageCredential);
 
     CreateExternalLocation createExternalLocation =
-            new CreateExternalLocation()
-                    .name(EXTERNAL_LOCATION_NAME)
-                    .url(URL)
-                    .credentialName(CREDENTIAL_NAME);
+        new CreateExternalLocation()
+            .name(EXTERNAL_LOCATION_NAME)
+            .url(URL)
+            .credentialName(CREDENTIAL_NAME);
     externalLocationOperations.createExternalLocation(createExternalLocation);
   }
 
@@ -200,7 +200,9 @@ public class LocationConflictTest extends BaseCRUDTest {
     storageCredentialOperations.createStorageCredential(createStorageCredential);
 
     // Create External Location
-    CreateTable createTable = new CreateTable().name(TABLE_NAME)
+    CreateTable createTable =
+        new CreateTable()
+            .name(TABLE_NAME)
             .catalogName(CATALOG_NAME)
             .schemaName(SCHEMA_NAME)
             .tableType(TableType.EXTERNAL)
@@ -210,10 +212,10 @@ public class LocationConflictTest extends BaseCRUDTest {
 
     // Create External Location ABOVE Table → Should Succeed
     CreateExternalLocation createExternalLocation =
-            new CreateExternalLocation()
-                    .name(EXTERNAL_LOCATION_NAME)
-                    .url(PARENT_URL)
-                    .credentialName(CREDENTIAL_NAME);
+        new CreateExternalLocation()
+            .name(EXTERNAL_LOCATION_NAME)
+            .url(PARENT_URL)
+            .credentialName(CREDENTIAL_NAME);
     externalLocationOperations.createExternalLocation(createExternalLocation);
   }
 
@@ -235,7 +237,9 @@ public class LocationConflictTest extends BaseCRUDTest {
     externalLocationOperations.createExternalLocation(createExternalLocation);
 
     // Try to create Table ABOVE the External Location → Should Fail
-    CreateTable createTable = new CreateTable().name(TABLE_NAME)
+    CreateTable createTable =
+        new CreateTable()
+            .name(TABLE_NAME)
             .catalogName(CATALOG_NAME)
             .schemaName(SCHEMA_NAME)
             .tableType(TableType.EXTERNAL)
