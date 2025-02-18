@@ -26,6 +26,7 @@ public class HibernateConfigurator {
 
   public HibernateConfigurator(Properties hibernateProperties) {
     if (hibernateProperties.isEmpty()) {
+      // Set default hibernate properties
       hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
       hibernateProperties.setProperty(
           "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");

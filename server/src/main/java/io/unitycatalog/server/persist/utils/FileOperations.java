@@ -12,6 +12,7 @@ import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.utils.Constants;
 import io.unitycatalog.server.utils.ServerProperties;
+import io.unitycatalog.server.utils.ServerProperties.Property;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -19,10 +20,7 @@ import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +47,7 @@ public class FileOperations {
 
   // Model specific storage root handlers and convenience methods
   private String getModelStorageRoot() {
-    String currentModelStorageRoot = serverProperties.getProperty("storage-root.models");
+    String currentModelStorageRoot = serverProperties.get(Property.MODEL_STORAGE_ROOT);
     if (modelStorageRootPropertyCached != currentModelStorageRoot) {
       // This means the property has been updated from the previous read, or this is the first time
       // reading it
@@ -212,40 +210,5 @@ public class FileOperations {
   public static boolean isSupportedCloudStorageUri(String url) {
     String scheme = URI.create(url).getScheme();
     return scheme != null && Constants.SUPPORTED_SCHEMES.contains(scheme);
-  }
-
-  public static List<String> getParentPathsList(String url) {
-    List<String> parentPaths = new ArrayList<>();
-
-    if (url == null || !url.contains("://")) {
-      throw new IllegalArgumentException("Invalid URL: " + url);
-    }
-
-    // Extract scheme (e.g., "s3://", "file://", etc.)
-    int schemeEndIdx = url.indexOf("://") + 3;
-    String scheme = url.substring(0, schemeEndIdx);
-
-    // Extract path part and remove trailing slash if present
-    String pathPart = url.substring(schemeEndIdx).replaceAll("/$", "");
-
-    if (pathPart.isEmpty()) {
-      return parentPaths; // No parent paths if only scheme is present
-    }
-
-    // Split path into components
-    String[] parts = pathPart.split("/");
-
-    // Construct parent paths iteratively
-    StringBuilder parentPath =
-        new StringBuilder(scheme + parts[0]); // Preserve scheme and bucket/container
-    for (int i = 1; i < parts.length - 1; i++) {
-      parentPath.append("/").append(parts[i]);
-      parentPaths.add(parentPath + "/"); // Ensure trailing slash for directories
-    }
-
-    // Reverse to match expected parent order
-    Collections.reverse(parentPaths);
-
-    return parentPaths;
   }
 }
