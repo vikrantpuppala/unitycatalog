@@ -8,30 +8,31 @@ import java.util.List;
 public class PathUtils {
   public static List<String> getParentPathsList(String url) {
     List<String> parentPaths = new ArrayList<>();
-    if (!url.contains("://")) {
-      throw new IllegalArgumentException(
-          "Invalid URL format. Must contain a scheme (e.g., s3://, file://)");
+
+    if (url == null || !url.contains("://")) {
+      throw new IllegalArgumentException("Invalid URL: " + url);
     }
 
-    // Split scheme and path
-    int schemeEndIndex = url.indexOf("://") + 3; // Include ://
-    String scheme = url.substring(0, schemeEndIndex);
-    String pathPart = url.substring(schemeEndIndex);
+    // Extract scheme (e.g., "s3://", "file://", etc.)
+    int schemeEndIdx = url.indexOf("://") + 3;
+    String scheme = url.substring(0, schemeEndIdx);
 
-    Path path = Paths.get(pathPart);
-    parentPaths.add(
-        scheme + path.toString().replaceAll("/$", "")); // Add full path, strip trailing slash
+    // Extract path part and remove trailing slash if present
+    String pathPart = url.substring(schemeEndIdx).replaceAll("/$", "");
 
-    while (path != null) {
-      path = path.getParent();
-      if (path != null) {
-        try {
-          String normalizedPath = scheme + path.toString().replaceAll("/$", ""); // Prepend scheme
-          parentPaths.add(normalizedPath);
-        } catch (Exception e) {
-          // Ignore invalid paths
-        }
-      }
+    if (pathPart.isEmpty()) {
+      return parentPaths; // No parent paths if only scheme is present
+    }
+
+    // Split path into components
+    String[] parts = pathPart.split("/");
+
+    // Construct parent paths iteratively
+    StringBuilder parentPath =
+        new StringBuilder(scheme + parts[0]); // Preserve scheme and bucket/container
+    for (int i = 1; i < parts.length - 1; i++) {
+      parentPath.append("/").append(parts[i]);
+      parentPaths.add(parentPath + "/"); // Ensure trailing slash for directories
     }
 
     return parentPaths;
