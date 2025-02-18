@@ -161,6 +161,10 @@ public class UnityCatalogServer {
     TableService tableService = new TableService(authorizer, repositories);
     FunctionService functionService = new FunctionService(authorizer, repositories);
     ModelService modelService = new ModelService(authorizer, repositories);
+    ExternalLocationService externalLocationService =
+        new ExternalLocationService(authorizer, repositories);
+    StorageCredentialService storageCredentialService =
+        new StorageCredentialService(authorizer, repositories);
     MetastoreService metastoreService = new MetastoreService(repositories);
     // TODO: combine these into a single service in a follow-up PR
     TemporaryTableCredentialsService temporaryTableCredentialsService =
@@ -219,7 +223,11 @@ public class UnityCatalogServer {
         .annotatedService(
             BASE_PATH + "temporary-path-credentials",
             temporaryPathCredentialsService,
-            requestConverterFunction);
+            requestConverterFunction)
+        .annotatedService(
+            BASE_PATH + "external-locations", externalLocationService, requestConverterFunction)
+        .annotatedService(
+            BASE_PATH + "storage-credentials", storageCredentialService, requestConverterFunction);
 
     addIcebergApiServices(
         armeriaServerBuilder,
