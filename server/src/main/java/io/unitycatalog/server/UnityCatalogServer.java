@@ -51,6 +51,7 @@ public class UnityCatalogServer {
   private static final String CONTROL_PATH = "/api/1.0/unity-control/";
   private static final int DEFAULT_PORT = 8080;
   public static final String SERVER_PROPERTIES_FILE = "etc/conf/server.properties";
+  public static final String HIBERNATE_PROPERTIES_FILE = "etc/conf/hibernate.properties";
   private final Server server;
   private final ServerProperties serverProperties;
   private final SecurityContext securityContext;
@@ -82,16 +83,9 @@ public class UnityCatalogServer {
     if (unityCatalogServerBuilder.serverProperties == null) {
       unityCatalogServerBuilder.serverProperties(new ServerProperties(SERVER_PROPERTIES_FILE));
     }
-    if (unityCatalogServerBuilder.credentialOperations == null) {
-      AwsCredentialVendor awsCredentialVendor =
-          new AwsCredentialVendor(unityCatalogServerBuilder.serverProperties);
-      AzureCredentialVendor azureCredentialVendor =
-          new AzureCredentialVendor(unityCatalogServerBuilder.serverProperties);
-      GcpCredentialVendor gcpCredentialVendor =
-          new GcpCredentialVendor(unityCatalogServerBuilder.serverProperties);
-      CredentialOperations credentialOperations =
-          new CredentialOperations(awsCredentialVendor, azureCredentialVendor, gcpCredentialVendor);
-      unityCatalogServerBuilder.credentialOperations(credentialOperations);
+    if (unityCatalogServerBuilder.hibernateConfigurator == null) {
+      unityCatalogServerBuilder.hibernateConfigurator(
+          new HibernateConfigurator(HIBERNATE_PROPERTIES_FILE));
     }
   }
 
@@ -102,11 +96,12 @@ public class UnityCatalogServer {
             .serviceUnder("/docs", new DocService());
 
     // Init hibernate
-    HibernateConfigurator hibernateConfigurator =
-        new HibernateConfigurator(unityCatalogServerBuilder.serverProperties);
+    HibernateConfigurator hibernateConfigurator = unityCatalogServerBuilder.hibernateConfigurator;
     // Init all repositories
     Repositories repositories =
         new Repositories(hibernateConfigurator.getSessionFactory(), serverProperties);
+    // Init credential operations
+    initializeCredentialOperations(unityCatalogServerBuilder, repositories);
     // Init metastore
     repositories.getMetastoreRepository().initMetastoreIfNeeded();
     // Init authorizer
@@ -120,6 +115,22 @@ public class UnityCatalogServer {
         armeriaServerBuilder, unityCatalogServerBuilder.serverProperties, authorizer, repositories);
 
     return armeriaServerBuilder.build();
+  }
+
+  private void initializeCredentialOperations(
+      UnityCatalogServer.Builder unityCatalogServerBuilder, Repositories repositories) {
+    if (unityCatalogServerBuilder.credentialOperations != null) {
+      return;
+    }
+    AwsCredentialVendor awsCredentialVendor =
+        new AwsCredentialVendor(unityCatalogServerBuilder.serverProperties, repositories);
+    AzureCredentialVendor azureCredentialVendor =
+        new AzureCredentialVendor(unityCatalogServerBuilder.serverProperties);
+    GcpCredentialVendor gcpCredentialVendor =
+        new GcpCredentialVendor(unityCatalogServerBuilder.serverProperties);
+    CredentialOperations credentialOperations =
+        new CredentialOperations(awsCredentialVendor, azureCredentialVendor, gcpCredentialVendor);
+    unityCatalogServerBuilder.credentialOperations(credentialOperations);
   }
 
   private UnityCatalogAuthorizer initializeAuthorizer(
@@ -356,6 +367,7 @@ public class UnityCatalogServer {
     private int port;
     private ServerProperties serverProperties;
     private CredentialOperations credentialOperations;
+    private HibernateConfigurator hibernateConfigurator;
 
     private Builder() {}
 
@@ -372,6 +384,12 @@ public class UnityCatalogServer {
     public UnityCatalogServer.Builder credentialOperations(
         CredentialOperations credentialOperations) {
       this.credentialOperations = credentialOperations;
+      return this;
+    }
+
+    public UnityCatalogServer.Builder hibernateConfigurator(
+        HibernateConfigurator hibernateConfigurator) {
+      this.hibernateConfigurator = hibernateConfigurator;
       return this;
     }
 

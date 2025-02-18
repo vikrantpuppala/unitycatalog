@@ -1,12 +1,7 @@
 package io.unitycatalog.server.persist.utils;
 
 import io.unitycatalog.server.persist.dao.*;
-import io.unitycatalog.server.utils.ServerProperties;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import io.unitycatalog.server.utils.PropertyUtils;
 import java.util.Properties;
 import lombok.Getter;
 import org.hibernate.SessionFactory;
@@ -29,9 +24,20 @@ public class HibernateConfigurator {
   private final SessionFactory sessionFactory;
   private final Properties hibernateProperties;
 
-  public HibernateConfigurator(ServerProperties serverProperties) {
-    this.hibernateProperties = setupHibernateProperties(serverProperties);
+  public HibernateConfigurator(Properties hibernateProperties) {
+    if (hibernateProperties.isEmpty()) {
+      // Set default hibernate properties
+      hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
+      hibernateProperties.setProperty(
+          "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
+      hibernateProperties.setProperty("hibernate.hbm2ddl.auto", "update");
+    }
+    this.hibernateProperties = hibernateProperties;
     this.sessionFactory = createSessionFactory(hibernateProperties);
+  }
+
+  public HibernateConfigurator(String propertiesFile) {
+    this(PropertyUtils.readPropertiesFromFile(propertiesFile));
   }
 
   private static SessionFactory createSessionFactory(Properties hibernateProperties) {
@@ -61,35 +67,5 @@ public class HibernateConfigurator {
     } catch (Exception e) {
       throw new RuntimeException("Exception during creation of SessionFactory", e);
     }
-  }
-
-  public static Properties setupHibernateProperties(ServerProperties serverProperties) {
-    Path hibernatePropertiesPath = Paths.get("etc/conf/hibernate.properties");
-    Properties hibernateProperties = new Properties();
-    if (!hibernatePropertiesPath.toFile().exists()) {
-      LOGGER.warn("Hibernate properties file not found: {}", hibernatePropertiesPath);
-      hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
-      hibernateProperties.setProperty(
-          "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
-      hibernateProperties.setProperty("hibernate.hbm2ddl.auto", "update");
-    } else {
-      InputStream input;
-      try {
-        input = Files.newInputStream(hibernatePropertiesPath);
-        hibernateProperties.load(input);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    // TODO: use dependency injection for test hibernate properties
-    if ("test".equals(serverProperties.getProperty("server.env"))) {
-      hibernateProperties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
-      hibernateProperties.setProperty(
-          "hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
-      hibernateProperties.setProperty("hibernate.hbm2ddl.auto", "create-drop");
-      LOGGER.debug("Hibernate configuration set for testing");
-    }
-    return hibernateProperties;
   }
 }

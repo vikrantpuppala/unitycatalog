@@ -63,7 +63,8 @@ public class GcpCredentialVendor {
         .refreshAccessToken();
   }
 
-  OAuth2Credentials downscopeGcpCreds(GoogleCredentials credentials, CredentialContext context) {
+  private static OAuth2Credentials downscopeGcpCreds(
+      GoogleCredentials credentials, CredentialContext context) {
     CredentialAccessBoundary.Builder boundaryBuilder = CredentialAccessBoundary.newBuilder();
     List<String> roles = resolvePrivilegesToRoles(context.getPrivileges());
 
@@ -110,7 +111,8 @@ public class GcpCredentialVendor {
         .build();
   }
 
-  List<String> resolvePrivilegesToRoles(Set<CredentialContext.Privilege> privileges) {
+  private static List<String> resolvePrivilegesToRoles(
+      Set<CredentialContext.Privilege> privileges) {
     if (privileges.contains(CredentialContext.Privilege.UPDATE)) {
       return List.of("inRole:roles/storage.objectAdmin");
     } else if (privileges.contains(CredentialContext.Privilege.SELECT)) {

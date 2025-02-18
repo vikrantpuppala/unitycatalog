@@ -1,9 +1,12 @@
 package io.unitycatalog.server.utils;
 
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
+import io.unitycatalog.server.exception.GlobalExceptionHandler;
 import java.util.regex.Pattern;
 
+@ExceptionHandler(GlobalExceptionHandler.class)
 public class ValidationUtils {
   // Regex to allow only alphanumeric characters, underscores, hyphens, and @ signs
   private static final Pattern VALID_FORMAT = Pattern.compile("[a-zA-Z0-9_@-]+");

@@ -6,7 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.unitycatalog.client.ApiException;
 import io.unitycatalog.client.model.*;
+import io.unitycatalog.server.base.externallocation.ExternalLocationOperations;
+import io.unitycatalog.server.base.storagecredential.StorageCredentialOperations;
 import io.unitycatalog.server.base.table.TableOperations;
+import io.unitycatalog.server.sdk.externallocation.SdkExternalLocationOperations;
+import io.unitycatalog.server.sdk.storagecredential.SdkStorageCredentialOperations;
 import io.unitycatalog.server.sdk.tables.SdkTableOperations;
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +39,8 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
   private final File dataDir = new File(System.getProperty("java.io.tmpdir"), "spark_test");
 
   private TableOperations tableOperations;
+  private StorageCredentialOperations storageCredentialOperations;
+  private ExternalLocationOperations externalLocationOperations;
 
   @Test
   public void testNoDeltaCatalog() throws IOException, ApiException {
@@ -127,12 +133,14 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
     SparkSession session = createSparkSessionWithCatalogs(SPARK_CATALOG);
 
     String loc1 = scheme + "://test-bucket0" + generateTableLocation(SPARK_CATALOG, PARQUET_TABLE);
+    setupCredentials(loc1, scheme);
     setupExternalParquetTable(PARQUET_TABLE, loc1, new ArrayList<>(0));
     String t1 = SPARK_CATALOG + "." + SCHEMA_NAME + "." + PARQUET_TABLE;
     testTableReadWrite(t1, session);
 
     String loc2 =
         scheme + "://test-bucket1" + generateTableLocation(SPARK_CATALOG, ANOTHER_PARQUET_TABLE);
+    setupCredentials(loc2, scheme);
     setupExternalParquetTable(ANOTHER_PARQUET_TABLE, loc2, new ArrayList<>(0));
     String t2 = SPARK_CATALOG + "." + SCHEMA_NAME + "." + ANOTHER_PARQUET_TABLE;
     testTableReadWrite(t2, session);
@@ -474,6 +482,21 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
     CredentialTestFileSystem.credentialCheckEnabled = true;
   }
 
+  private void setupCredentials(String location, String scheme) throws ApiException {
+    int random = (int) (Math.random() * 1000);
+    String credentialName = scheme + "_credential_" + random, externalLocationName = scheme + "_location" + random;
+    CreateStorageCredential createStorageCredential = new CreateStorageCredential().name(credentialName);
+    switch (scheme) {
+      case "s3":
+        createStorageCredential.setAwsIamRole(new AwsIamRoleRequest().roleArn("test"));
+        break;
+    }
+    storageCredentialOperations.createStorageCredential(createStorageCredential);
+    CreateExternalLocation createExternalLocation =
+        new CreateExternalLocation().name(externalLocationName).url(location).credentialName(credentialName);
+    externalLocationOperations.createExternalLocation(createExternalLocation);
+  }
+
   private void setupExternalDeltaTable(
       String catalogName,
       String tableName,
@@ -555,6 +578,8 @@ public class TableReadWriteTest extends BaseSparkIntegrationTest {
   public void setUp() {
     super.setUp();
     tableOperations = new SdkTableOperations(createApiClient(serverConfig));
+    storageCredentialOperations = new SdkStorageCredentialOperations(createApiClient(serverConfig));
+    externalLocationOperations = new SdkExternalLocationOperations(createApiClient(serverConfig));
   }
 
   @Override

@@ -2,7 +2,6 @@ package io.unitycatalog.server.utils;
 
 import static io.unitycatalog.server.utils.ColumnUtils.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.unitycatalog.server.model.*;
 import io.unitycatalog.server.persist.CatalogRepository;
 import io.unitycatalog.server.persist.FunctionRepository;
@@ -32,13 +31,14 @@ import org.hibernate.Transaction;
  */
 public class PopulateTestDatabase {
 
-  public static void main(String[] args) throws JsonProcessingException {
+  public static void main(String[] args) {
     System.out.println("Populating test database...");
 
     Properties properties = new Properties();
     properties.setProperty("server.env", "dev");
     ServerProperties serverProperties = new ServerProperties(properties);
-    HibernateConfigurator hibernateConfigurator = new HibernateConfigurator(serverProperties);
+    HibernateConfigurator hibernateConfigurator =
+        new HibernateConfigurator(TestUtils.getTestHibernateProperties());
     Repositories repositories =
         new Repositories(hibernateConfigurator.getSessionFactory(), serverProperties);
     CatalogRepository catalogRepository = repositories.getCatalogRepository();

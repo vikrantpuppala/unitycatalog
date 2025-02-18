@@ -5,8 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.unitycatalog.server.exception.BaseException;
 import io.unitycatalog.server.exception.ErrorCode;
 import io.unitycatalog.server.model.*;
+import io.unitycatalog.server.persist.dao.ExternalLocationDAO;
 import io.unitycatalog.server.persist.dao.StorageCredentialDAO;
 import io.unitycatalog.server.persist.utils.PagedListingHelper;
+import io.unitycatalog.server.persist.utils.PathUtils;
+import io.unitycatalog.server.service.credential.CredentialContext;
 import io.unitycatalog.server.utils.IdentityUtils;
 import io.unitycatalog.server.utils.ValidationUtils;
 import java.time.Instant;
@@ -34,8 +37,8 @@ public class StorageCredentialRepository {
   public StorageCredentialInfo addStorageCredential(
       CreateStorageCredential createStorageCredential) {
     ValidationUtils.validateSqlObjectName(createStorageCredential.getName());
-    String callerId = IdentityUtils.findPrincipalEmailAddress();
     UUID storageCredentialId = UUID.randomUUID();
+    String callerId = IdentityUtils.findPrincipalEmailAddress();
     StorageCredentialInfo storageCredentialInfo =
         new StorageCredentialInfo()
             .id(storageCredentialId.toString())
@@ -102,6 +105,16 @@ public class StorageCredentialRepository {
         session.createQuery(
             "FROM StorageCredentialDAO WHERE name = :value", StorageCredentialDAO.class);
     query.setParameter("value", name);
+    query.setMaxResults(1);
+    return query.uniqueResult();
+  }
+
+  protected StorageCredentialDAO getStorageCredentialDAOById(
+      Session session, UUID storageCredentialId) {
+    Query<StorageCredentialDAO> query =
+        session.createQuery(
+            "FROM StorageCredentialDAO WHERE id = :value", StorageCredentialDAO.class);
+    query.setParameter("value", storageCredentialId);
     query.setMaxResults(1);
     return query.uniqueResult();
   }
@@ -207,6 +220,40 @@ public class StorageCredentialRepository {
       } catch (Exception e) {
         tx.rollback();
         LOGGER.error("Failed to delete storage credential", e);
+        throw e;
+      }
+    }
+  }
+
+  public Optional<StorageCredentialInfo> getStorageCredentialsForPath(CredentialContext context) {
+    try (Session session = sessionFactory.openSession()) {
+      session.setDefaultReadOnly(true);
+      Transaction tx = session.beginTransaction();
+      try {
+        List<ExternalLocationDAO> results =
+            session
+                .createQuery(
+                    "SELECT el FROM ExternalLocationDAO el " + "WHERE el.url IN :parentPaths",
+                    ExternalLocationDAO.class)
+                .setParameter("parentPaths", PathUtils.getParentPathsList(context.getUri()))
+                .getResultList();
+        if (results.isEmpty()) {
+          return Optional.empty();
+        }
+        ExternalLocationDAO externalLocationToUse = results.get(0);
+        StorageCredentialDAO storageCredentialDAO =
+            repositories
+                .getStorageCredentialRepository()
+                .getStorageCredentialDAO(
+                    session, externalLocationToUse.getCredentialId().toString());
+        if (storageCredentialDAO == null) {
+          return Optional.empty();
+        }
+        tx.commit();
+        return Optional.of(storageCredentialDAO.toStorageCredentialInfo());
+      } catch (Exception e) {
+        tx.rollback();
+        LOGGER.error("Failed to retrieve storage credential", e);
         throw e;
       }
     }

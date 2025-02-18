@@ -99,7 +99,7 @@ public class FileOperations {
 
   public void deleteDirectory(String path) {
     URI directoryUri = createURI(path);
-    validateURI(directoryUri);
+    UriUtils.validateURI(directoryUri);
     if (directoryUri.getScheme() == null || directoryUri.getScheme().equals("file")) {
       try {
         deleteLocalDirectory(Paths.get(directoryUri));
@@ -210,19 +210,5 @@ public class FileOperations {
   public static boolean isSupportedCloudStorageUri(String url) {
     String scheme = URI.create(url).getScheme();
     return scheme != null && Constants.SUPPORTED_SCHEMES.contains(scheme);
-  }
-
-  private static void validateURI(URI uri) {
-    if (uri.getScheme() == null) {
-      throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Invalid path: " + uri.getPath());
-    }
-    URI normalized = uri.normalize();
-    if (!normalized.getPath().startsWith(uri.getPath())) {
-      throw new BaseException(ErrorCode.INVALID_ARGUMENT, "Normalization failed: " + uri.getPath());
-    }
-  }
-
-  public static void assertValidLocation(String location) {
-    validateURI(URI.create(location));
   }
 }

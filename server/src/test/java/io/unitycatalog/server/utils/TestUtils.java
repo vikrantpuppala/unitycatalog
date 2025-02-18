@@ -5,6 +5,7 @@ import io.unitycatalog.server.base.ServerConfig;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 public class TestUtils {
   public static final String CATALOG_NAME = "uc_testcatalog";
@@ -65,5 +66,13 @@ public class TestUtils {
           request -> request.header("Authorization", "Bearer " + serverConfig.getAuthToken()));
     }
     return apiClient;
+  }
+
+  public static Properties getTestHibernateProperties() {
+    Properties properties = new Properties();
+    properties.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
+    properties.setProperty("hibernate.connection.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
+    properties.setProperty("hibernate.hbm2ddl.auto", "create-drop");
+    return properties;
   }
 }
